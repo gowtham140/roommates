@@ -22,10 +22,10 @@ const Navbar = () => {
       label: "Home",
       path: "/",
     },
-    {
-      label: "Find Rooms",
-      path: "/rooms",
-    },
+    // {
+    //   label: "Find Rooms",
+    //   path: "/rooms",
+    // },
     {
       label: "How It Works",
       path: "/how-it-works",

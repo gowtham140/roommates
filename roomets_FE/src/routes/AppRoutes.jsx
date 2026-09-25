@@ -5,6 +5,9 @@ import AppLayout from "../components/layout/AppLayout";
 
 import Register from "../pages/auth/Register";
 import Login from "../pages/auth/Login";
+import Home from "../pages/Home/Home";
+import HowItWorks from "../pages/Home/HowItWorks";
+import Safety from "../pages/Home/Safety";
 
 const Page = ({ title, subtitle }) => (
   <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -48,10 +51,7 @@ const AppRoutes = () => {
         <Route
           index
           element={
-            <Page
-              title="Home"
-              subtitle="Welcome to RoomMate Finder."
-            />
+            <Home />
           }
         />
 
@@ -70,22 +70,14 @@ const AppRoutes = () => {
         <Route
           path="how-it-works"
           element={
-            <Page
-              title="How It Works"
-              subtitle="A simple, transparent process to find a trusted room."
-            />
+            <HowItWorks />
           }
         />
 
         {/* Safety */}
         <Route
           path="safety"
-          element={
-            <Page
-              title="Safety"
-              subtitle="Verified listings and safer room searches for everyone."
-            />
-          }
+          element={<Safety />}
         />
 
         {/* Login */}
