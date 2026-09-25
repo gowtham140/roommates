@@ -13,6 +13,7 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import { useState } from "react";
 import MD5 from "crypto-js/md5";
+import { createUser } from "../../API/request";
 
 
 const Register = () => {
@@ -74,23 +75,13 @@ const Register = () => {
 
     console.log("API Request JSON:", requestData);
 
-    // API call will go here
-    // Example:
-    //
-    // fetch("http://localhost:8080/api/register", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify(requestData),
-    // })
-    //   .then((response) => response.json())
-    //   .then((data) => {
-    //     console.log(data);
-    //   })
-    //   .catch((error) => {
-    //     console.error(error);
-    //   });
+    createUser(requestData).then(res=>{
+
+    }).catch(err=>{
+      console.log(err);
+      
+    })
+
   };
 
   return (

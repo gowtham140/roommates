@@ -1,7 +1,11 @@
 package com.roomates.security;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -11,6 +15,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableMethodSecurity
@@ -34,36 +42,85 @@ public class WebSecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration) throws Exception {
+            AuthenticationConfiguration configuration)
+            throws Exception {
 
         return configuration.getAuthenticationManager();
     }
 
+    // =========================
+    // CORS CONFIGURATION
+    // =========================
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration =
+                new CorsConfiguration();
+
+        // Allow ALL origins
+        configuration.setAllowedOriginPatterns(
+                List.of("*")
+        );
+
+        // Allow ALL HTTP methods
+        configuration.setAllowedMethods(
+                List.of("*")
+        );
+
+        // Allow ALL headers
+        configuration.setAllowedHeaders(
+                List.of("*")
+        );
+
+        // We are not using cookies/session credentials
+        configuration.setAllowCredentials(false);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
+
+        return source;
+    }
+
+    // =========================
+    // SECURITY
+    // =========================
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
 
         http
-            // REST API -> CSRF disabled
+
             .csrf(csrf -> csrf.disable())
 
-            // CORS
             .cors(cors -> {})
 
-            // No HTTP session for JWT authentication
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
                 )
             )
 
-            // Authorization rules
             .authorizeHttpRequests(auth -> auth
 
-                // Public authentication APIs
-                .requestMatchers("/api/auth/**").permitAll()
+                // VERY IMPORTANT
+                // Allow CORS preflight requests
+                .requestMatchers(
+                    HttpMethod.OPTIONS,
+                    "/**"
+                ).permitAll()
 
-                // You can add other public endpoints here
+                // Public authentication APIs
+                .requestMatchers(
+                    "/api/auth/**"
+                ).permitAll()
+
                 .requestMatchers(
                     "/",
                     "/error",
@@ -71,17 +128,16 @@ public class WebSecurityConfig {
                     "/v3/api-docs/**"
                 ).permitAll()
 
-                // EVERYTHING ELSE requires authentication
+                // Everything else requires JWT
                 .anyRequest().authenticated()
             )
 
-            // Return 401 when authentication is required
-            // but the request is not authenticated
             .exceptionHandling(exception ->
-                exception.authenticationEntryPoint(authEntryPoint)
+                exception.authenticationEntryPoint(
+                    authEntryPoint
+                )
             )
 
-            // Your JWT filter
             .addFilterBefore(
                 requestFilter,
                 UsernamePasswordAuthenticationFilter.class
