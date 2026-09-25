@@ -11,8 +11,88 @@ import {
 } from "@mui/material";
 
 import { Link as RouterLink } from "react-router-dom";
+import { useState } from "react";
+import MD5 from "crypto-js/md5";
+
 
 const Register = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    password: "",
+    confirmPassword: "",
+    agreed: false,
+  });
+  
+
+  const [error, setError] = useState("");
+
+  // Handle input changes
+  const handleChange = (event) => {
+    const { name, value, checked, type } = event.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    // Clear error while user is typing
+    setError("");
+  };
+
+  // Submit form
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    // Password validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Password and confirm password must be the same.");
+      return;
+    }
+
+    if(formData.email === '' || formData.mobile === '' || formData.name === '' || formData.password === ''){
+       setError("Please fill all values.");
+      return;
+    }
+
+    // Agreement validation
+    if (!formData.agreed) {
+      setError("Please accept the community guidelines.");
+      return;
+    }
+
+    // JSON object for API
+    const requestData = {
+      name: formData.name,
+      email: formData.email,
+      mobile: formData.mobile,
+      password: formData.password,
+      cpassword: MD5(formData.password).toString()
+
+    };
+
+    console.log("API Request JSON:", requestData);
+
+    // API call will go here
+    // Example:
+    //
+    // fetch("http://localhost:8080/api/register", {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify(requestData),
+    // })
+    //   .then((response) => response.json())
+    //   .then((data) => {
+    //     console.log(data);
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //   });
+  };
+
   return (
     <Box
       sx={{
@@ -69,115 +149,150 @@ const Register = () => {
         </Typography>
 
         {/* Form */}
-        <Grid container spacing={2}>
-          {/* Name */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              label="Name"
-              placeholder=""
-            />
-          </Grid>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={2}>
 
-          {/* Email */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              label="Email"
-              type="email"
-            />
-          </Grid>
+            {/* Name */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+              />
+            </Grid>
 
-          {/* Mobile */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              label="Mobile number"
-              type="tel"
-            />
-          </Grid>
+            {/* Email */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </Grid>
 
-          {/* Password */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              label="Password"
-              type="password"
-            />
-          </Grid>
+            {/* Mobile */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField
+                label="Mobile number"
+                name="mobile"
+                type="tel"
+                value={formData.mobile}
+                onChange={handleChange}
+              />
+            </Grid>
 
-          {/* Confirm Password */}
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <FormField
-              label="Confirm password"
-              type="password"
-            />
-          </Grid>
+            {/* Password */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField
+                label="Password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+              />
+            </Grid>
 
-          {/* Agreement */}
-          <Grid
-            size={{ xs: 12, sm: 6 }}
-            sx={{
-              display: "flex",
-              alignItems: "flex-start",
-            }}
-          >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  size="small"
-                  sx={{
-                    color: "#7A8794",
-                    p: 0.5,
-                    mt: 0.2,
+            {/* Confirm Password */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormField
+                label="Confirm password"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+              />
+            </Grid>
 
-                    "&.Mui-checked": {
-                      color: "#3730E8",
-                    },
-                  }}
-                />
-              }
-              label={
-                <Typography
-                  sx={{
-                    fontSize: "13.5px",
-                    lineHeight: 1.45,
-                    color: "#243858",
-                  }}
-                >
-                  I agree to the community guidelines and privacy-first
-                  matching.
-                </Typography>
-              }
+            {/* Agreement */}
+            <Grid
+              size={{ xs: 12, sm: 6 }}
               sx={{
+                display: "flex",
                 alignItems: "flex-start",
-                m: 0,
-              }}
-            />
-          </Grid>
-
-          {/* Create Account */}
-          <Grid size={12}>
-            <Button
-              fullWidth
-              variant="contained"
-              type="submit"
-              sx={{
-                height: 49,
-                mt: 0.5,
-                borderRadius: "11px",
-                backgroundColor: "#3737E8",
-                textTransform: "none",
-                fontSize: "15px",
-                fontWeight: 700,
-                boxShadow: "none",
-
-                "&:hover": {
-                  backgroundColor: "#2F30D1",
-                  boxShadow: "none",
-                },
               }}
             >
-              Create account
-            </Button>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="agreed"
+                    checked={formData.agreed}
+                    onChange={handleChange}
+                    size="small"
+                    sx={{
+                      color: "#7A8794",
+                      p: 0.5,
+                      mt: 0.2,
+
+                      "&.Mui-checked": {
+                        color: "#3730E8",
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography
+                    sx={{
+                      fontSize: "13.5px",
+                      lineHeight: 1.45,
+                      color: "#243858",
+                    }}
+                  >
+                    I agree to the community guidelines and privacy-first
+                    matching.
+                  </Typography>
+                }
+                sx={{
+                  alignItems: "flex-start",
+                  m: 0,
+                }}
+              />
+            </Grid>
+
+            {/* Error */}
+            {error && (
+              <Grid size={12}>
+                <Typography
+                  sx={{
+                    color: "#D32F2F",
+                    fontSize: "13px",
+                    mt: -0.5,
+                  }}
+                >
+                  {error}
+                </Typography>
+              </Grid>
+            )}
+
+            {/* Create Account */}
+            <Grid size={12}>
+              <Button
+                fullWidth
+                variant="contained"
+                type="submit"
+                sx={{
+                  height: 49,
+                  mt: 0.5,
+                  borderRadius: "11px",
+                  backgroundColor: "#3737E8",
+                  textTransform: "none",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  boxShadow: "none",
+
+                  "&:hover": {
+                    backgroundColor: "#2F30D1",
+                    boxShadow: "none",
+                  },
+                }}
+              >
+                Create account
+              </Button>
+            </Grid>
           </Grid>
-        </Grid>
+        </Box>
 
         {/* Login */}
         <Box
@@ -216,14 +331,15 @@ const Register = () => {
   );
 };
 
-
 /*
  * Reusable form field
  */
 const FormField = ({
   label,
+  name,
   type = "text",
-  placeholder = "",
+  value,
+  onChange,
 }) => {
   return (
     <Box>
@@ -242,8 +358,10 @@ const FormField = ({
 
       <TextField
         fullWidth
+        name={name}
         type={type}
-        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
         variant="outlined"
         size="medium"
         sx={{

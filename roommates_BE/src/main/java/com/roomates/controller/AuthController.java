@@ -1,6 +1,5 @@
 package com.roomates.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,8 +14,11 @@ import com.roomates.webModel.Response;
 @RequestMapping("/api/auth")
 public class AuthController {
 	
-	@Autowired
-	AuthService authService;
+	final AuthService authService;
+
+	AuthController(AuthService authService) {
+		this.authService = authService;
+	}
 
 	@PostMapping("/test")
 	public String test() {
