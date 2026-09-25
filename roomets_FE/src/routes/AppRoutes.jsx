@@ -8,6 +8,7 @@ import Login from "../pages/auth/Login";
 import Home from "../pages/Home/Home";
 import HowItWorks from "../pages/Home/HowItWorks";
 import Safety from "../pages/Home/Safety";
+import FindRooms from "../pages/Home/FindRooms";
 
 const Page = ({ title, subtitle }) => (
   <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -58,12 +59,7 @@ const AppRoutes = () => {
         {/* Find Rooms */}
         <Route
           path="rooms"
-          element={
-            <Page
-              title="Find Rooms"
-              subtitle="Browse verified room listings in Chennai."
-            />
-          }
+          element={<FindRooms /> }
         />
 
         {/* How It Works */}
