@@ -29,4 +29,6 @@ public interface RoomRepository extends JpaRepository<Room, Integer> {
             Pageable pageable);
 
     List<Room> findByOwnerId(Integer ownerId);
+
+    List<Room> findByLocationIgnoreCase(String location);
 }

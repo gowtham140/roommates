@@ -73,6 +73,7 @@ public class WebSecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/rooms/**").permitAll()
                 .requestMatchers("/uploads/**", "/", "/error").permitAll()
                 .anyRequest().authenticated()

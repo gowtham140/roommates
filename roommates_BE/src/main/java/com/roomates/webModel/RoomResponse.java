@@ -26,6 +26,8 @@ public class RoomResponse implements Serializable {
     private List<String> amenities;
     private List<String> imageUrls;
     private String status;
+    private Double latitude;
+    private Double longitude;
     private LocalDateTime createdAt;
 
     public RoomResponse() {
@@ -34,7 +36,7 @@ public class RoomResponse implements Serializable {
     public RoomResponse(Integer id, Integer ownerId, String ownerName, String title, String description,
             String location, BigDecimal rent, BigDecimal deposit, String roomType, String sharing, String gender,
             Boolean food, LocalDate availableFrom, List<String> amenities, List<String> imageUrls, String status,
-            LocalDateTime createdAt) {
+            Double latitude, Double longitude, LocalDateTime createdAt) {
         this.id = id;
         this.ownerId = ownerId;
         this.ownerName = ownerName;
@@ -51,6 +53,8 @@ public class RoomResponse implements Serializable {
         this.amenities = amenities;
         this.imageUrls = imageUrls;
         this.status = status;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.createdAt = createdAt;
     }
 
@@ -180,6 +184,22 @@ public class RoomResponse implements Serializable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public LocalDateTime getCreatedAt() {

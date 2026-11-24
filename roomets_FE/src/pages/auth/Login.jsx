@@ -29,6 +29,7 @@ const Login = () => {
   const [remember, setRemember] = useState(
     () => Boolean(localStorage.getItem("rememberedEmail"))
   );
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -41,6 +42,15 @@ const Login = () => {
       setSnackbar({
         open: true,
         message: "Please enter both email and password.",
+        severity: "error",
+      });
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setSnackbar({
+        open: true,
+        message: "Please accept the terms and conditions before logging in.",
         severity: "error",
       });
       return;
@@ -262,6 +272,30 @@ const Login = () => {
             </Link>
           </Box>
 
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={acceptedTerms}
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+                sx={{
+                  p: 0.3,
+                  mr: 0.4,
+                  color: "#7A8794",
+                  "&.Mui-checked": { color: "#3730E8" },
+                }}
+              />
+            }
+            label={
+              <Typography sx={{ fontSize: "12.5px", lineHeight: 1.5, color: "#52657D" }}>
+                I accept the terms and understand that listings and brokers are
+                third parties; the company is not responsible for any loss,
+                dispute, or incident arising from them.
+              </Typography>
+            }
+            sx={{ alignItems: "flex-start", m: 0, mb: 1.8 }}
+          />
+
           <Button
             fullWidth
             variant="contained"
@@ -298,7 +332,7 @@ const Login = () => {
         <Button
           fullWidth
           variant="contained"
-          disabled={submitting}
+          disabled={submitting || !acceptedTerms}
           onClick={() => performLogin("demo@roommates.local", "demo1234")}
           sx={{
             height: 48,
@@ -315,7 +349,32 @@ const Login = () => {
             },
           }}
         >
-          Continue as verified user (demo)
+          Continue as verified owner (demo)
+        </Button>
+
+        <Button
+          fullWidth
+          variant="outlined"
+          disabled={submitting || !acceptedTerms}
+          onClick={() => performLogin("seeker@roommates.local", "seeker1234")}
+          sx={{
+            height: 48,
+            mt: 1.2,
+            borderRadius: "11px",
+            borderColor: "#BDD3DF",
+            color: "#1D3553",
+            textTransform: "none",
+            fontSize: "14px",
+            fontWeight: 700,
+            boxShadow: "none",
+            "&:hover": {
+              borderColor: "#3730E8",
+              backgroundColor: "#F8F9FF",
+              boxShadow: "none",
+            },
+          }}
+        >
+          Continue as verified seeker (demo)
         </Button>
 
         <Box

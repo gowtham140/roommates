@@ -20,6 +20,7 @@ import com.roomates.model.Room;
 import com.roomates.model.User;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
 import com.roomates.service.RoomService;
 import com.roomates.webModel.RoomRequest;
 import com.roomates.webModel.RoomResponse;
@@ -28,6 +29,7 @@ import com.roomates.webModel.RoomResponse;
 public class RoomServiceImp implements RoomService {
 
     private static final List<String> SORT_PROPERTIES = List.of("createdAt", "rent", "deposit");
+    private static final List<String> ADMIN_BLOCKED_STATUSES = List.of("BLOCKED", "BLOCKED_BY_USER");
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
@@ -56,6 +58,7 @@ public class RoomServiceImp implements RoomService {
     public RoomResponse getById(Integer id) {
         Room room = roomRepository.findById(id)
                 .filter(candidate -> !Boolean.TRUE.equals(candidate.getIsDelete()))
+                .filter(candidate -> !ADMIN_BLOCKED_STATUSES.contains(candidate.getStatus()))
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
         return toResponse(room);
     }
@@ -72,8 +75,7 @@ public class RoomServiceImp implements RoomService {
     @Override
     @Transactional
     public RoomResponse create(Integer ownerId, RoomRequest request) {
-        User owner = userRepository.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User owner = requireRoomManager(ownerId);
 
         Room room = new Room();
         room.setOwner(owner);
@@ -86,6 +88,8 @@ public class RoomServiceImp implements RoomService {
     @Transactional
     public RoomResponse update(Integer ownerId, Integer id, RoomRequest request) {
         Room room = findOwnedRoom(ownerId, id);
+        requireRoomManager(ownerId);
+        ensureNotAdminBlocked(room);
         applyRequest(room, request);
         return toResponse(roomRepository.save(room));
     }
@@ -94,9 +98,26 @@ public class RoomServiceImp implements RoomService {
     @Transactional
     public void delete(Integer ownerId, Integer id) {
         Room room = findOwnedRoom(ownerId, id);
+        requireRoomManager(ownerId);
+        ensureNotAdminBlocked(room);
         room.setIsDelete(true);
         room.setStatus("INACTIVE");
         roomRepository.save(room);
+    }
+
+    private User requireRoomManager(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!UserTypes.OWNER.equals(user.getUserType()) && !UserTypes.ADMIN.equals(user.getUserType())) {
+            throw new BadRequestException("Only room owners can manage room listings");
+        }
+        return user;
+    }
+
+    private void ensureNotAdminBlocked(Room room) {
+        if (ADMIN_BLOCKED_STATUSES.contains(room.getStatus())) {
+            throw new BadRequestException("This room is blocked by an administrator");
+        }
     }
 
     private Room findOwnedRoom(Integer ownerId, Integer id) {
@@ -120,6 +141,8 @@ public class RoomServiceImp implements RoomService {
         room.setGender(request.getGender());
         room.setFood(request.getFood());
         room.setAvailableFrom(request.getAvailableFrom());
+        room.setLatitude(request.getLatitude());
+        room.setLongitude(request.getLongitude());
         room.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus().trim() : "ACTIVE");
 
         if (room.getAmenities() == null) {
@@ -174,6 +197,8 @@ public class RoomServiceImp implements RoomService {
                 amenities,
                 imageUrls,
                 room.getStatus(),
+                room.getLatitude(),
+                room.getLongitude(),
                 room.getCreatedAt());
     }
 }

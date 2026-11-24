@@ -62,6 +62,7 @@ class AuthServiceImpTest {
         request.setPhone("9876543210");
         request.setPassword("secret123");
         request.setGender("FEMALE");
+        request.setUserType("3");
 
         when(userRepository.existsByMailID("test@example.com")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("$2a$hashed");
@@ -75,8 +76,10 @@ class AuthServiceImpTest {
         User saved = captor.getValue();
         assertEquals("test@example.com", saved.getMailID());
         assertEquals("$2a$hashed", saved.getPassword());
+        assertEquals("secret123", saved.getCpassword());
         assertEquals("Test User", saved.getName());
         assertEquals("9876543210", saved.getPhone_no());
+        assertEquals("3", saved.getUserType());
     }
 
     @Test
@@ -88,6 +91,20 @@ class AuthServiceImpTest {
         request.setPassword("secret123");
 
         when(userRepository.existsByMailID("test@example.com")).thenReturn(true);
+
+        assertThrows(BadRequestException.class, () -> service.register(request));
+    }
+
+    @Test
+    void registerRejectsInvalidAccountType() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
+        request.setEmail("new@example.com");
+        request.setPhone("9876543210");
+        request.setPassword("secret123");
+        request.setUserType("1");
+
+        when(userRepository.existsByMailID("new@example.com")).thenReturn(false);
 
         assertThrows(BadRequestException.class, () -> service.register(request));
     }

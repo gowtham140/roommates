@@ -49,6 +49,7 @@ class EnquiryServiceImpTest {
     void sendRejectsEnquiryOnOwnRoom() {
         User owner = new User();
         owner.setId(1);
+        owner.setUserType("3");
 
         Room room = new Room();
         room.setId(3);
@@ -71,6 +72,7 @@ class EnquiryServiceImpTest {
         owner.setId(1);
         User seeker = new User();
         seeker.setId(2);
+        seeker.setUserType("3");
 
         Room room = new Room();
         room.setId(3);
@@ -99,6 +101,7 @@ class EnquiryServiceImpTest {
         seeker.setId(2);
         seeker.setName("Seeker");
         seeker.setPhone_no("9000000002");
+        seeker.setUserType("3");
 
         Room room = new Room();
         room.setId(3);

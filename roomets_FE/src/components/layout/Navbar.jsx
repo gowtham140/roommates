@@ -20,13 +20,16 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  AdminPanelSettingsOutlined,
   HomeOutlined,
   LocationOnOutlined,
   Menu as MenuIcon,
   AddHomeWorkOutlined,
+  SearchRounded,
 } from "@mui/icons-material";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import { canManageRooms, isAdmin, isSeeker } from "../../utils/userTypes";
 
 const navItems = [
   { label: "Home", path: "/" },
@@ -49,6 +52,9 @@ const linkStyle = {
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const admin = isAdmin(user);
+  const owner = canManageRooms(user);
+  const seeker = isSeeker(user);
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -61,9 +67,21 @@ const Navbar = () => {
 
   const accountItems = [
     { label: "My Profile", path: "/profile" },
-    { label: "My Rooms", path: "/my-rooms" },
-    { label: "My Enquiries", path: "/enquiries" },
-    { label: "Post a Room", path: "/post-room" },
+    ...(owner
+      ? [
+          { label: "My Rooms", path: "/my-rooms" },
+          { label: "My Enquiries", path: "/enquiries" },
+          { label: "Post a Room", path: "/post-room" },
+        ]
+      : []),
+    ...(seeker
+      ? [
+          { label: "My Applications", path: "/my-applications" },
+          { label: "Liked Rooms", path: "/liked-rooms" },
+          { label: "My Enquiries", path: "/enquiries" },
+        ]
+      : []),
+    ...(admin ? [{ label: "Admin Dashboard", path: "/admin" }] : []),
   ];
 
   return (
@@ -121,6 +139,23 @@ const Navbar = () => {
                 {item.label}
               </Button>
             ))}
+            {admin && (
+              <Button
+                component={NavLink}
+                to="/admin"
+                startIcon={<AdminPanelSettingsOutlined sx={{ fontSize: "18px !important" }} />}
+                sx={{
+                  ...linkStyle,
+                  ml: 0.5,
+                  backgroundColor: "#EEE9FF",
+                  color: "#5B3DD9",
+                  "&.active": { backgroundColor: "#DDD4FF", color: "#4A2FC0" },
+                  "&:hover": { backgroundColor: "#E4DCFF" },
+                }}
+              >
+                Admin
+              </Button>
+            )}
           </Stack>
 
           <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: "none", sm: "flex" } }}>
@@ -139,23 +174,43 @@ const Navbar = () => {
 
             {user ? (
               <>
-                <Button
-                  component={NavLink}
-                  to="/post-room"
-                  variant="contained"
-                  startIcon={<AddHomeWorkOutlined />}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    backgroundColor: "#3730E8",
-                    borderRadius: "11px",
-                    px: 2,
-                    boxShadow: "none",
-                    "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
-                  }}
-                >
-                  Post a room
-                </Button>
+                {owner ? (
+                  <Button
+                    component={NavLink}
+                    to="/post-room"
+                    variant="contained"
+                    startIcon={<AddHomeWorkOutlined />}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      backgroundColor: "#3730E8",
+                      borderRadius: "11px",
+                      px: 2,
+                      boxShadow: "none",
+                      "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
+                    }}
+                  >
+                    Post a room
+                  </Button>
+                ) : (
+                  <Button
+                    component={NavLink}
+                    to="/rooms"
+                    variant="contained"
+                    startIcon={<SearchRounded />}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      backgroundColor: "#3730E8",
+                      borderRadius: "11px",
+                      px: 2,
+                      boxShadow: "none",
+                      "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
+                    }}
+                  >
+                    Find rooms
+                  </Button>
+                )}
                 <IconButton onClick={(event) => setAnchorEl(event.currentTarget)} aria-label="Account menu">
                   <Avatar sx={{ bgcolor: "#0F9D8A", width: 34, height: 34, fontSize: 14 }}>
                     {(user.name || "U").charAt(0).toUpperCase()}

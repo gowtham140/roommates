@@ -22,12 +22,16 @@ import {
 } from "@mui/icons-material";
 import { getRoom } from "../../API/roomsAPI";
 import { sendEnquiry } from "../../API/enquiriesAPI";
+import MapView from "../../components/maps/MapView";
+import useUserLocation from "../../hooks/useUserLocation";
+import { distanceKm, formatDistance } from "../../utils/geo";
 import { useAuth } from "../../context/authContext";
 import { RoomImage } from "./FindRooms";
 
 const RoomDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { position: userPosition } = useUserLocation();
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -323,6 +327,22 @@ const RoomDetail = () => {
                   {room.location || "Location not specified"}
                 </Typography>
               </Box>
+
+              {room.latitude != null && room.longitude != null && (
+                <Box sx={{ mb: 2 }}>
+                  <MapView
+                    latitude={room.latitude}
+                    longitude={room.longitude}
+                    label={room.title}
+                    userPosition={userPosition}
+                  />
+                  {userPosition && (
+                    <Typography sx={{ fontSize: 13, color: "#0F9D8A", fontWeight: 700, mt: 1 }}>
+                      {formatDistance(distanceKm(userPosition, room))} from you
+                    </Typography>
+                  )}
+                </Box>
+              )}
 
               <Box
                 sx={{

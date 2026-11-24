@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { register } from "../../API/authAPI";
+import { USER_TYPES } from "../../utils/userTypes";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     gender: "",
+    userType: "",
     agreed: false,
   });
 
@@ -62,10 +64,11 @@ const Register = () => {
       password,
       confirmPassword,
       gender,
+      userType,
       agreed,
     } = formData;
 
-    if (!name || !email || !mobile || !password || !confirmPassword || !gender) {
+    if (!name || !email || !mobile || !password || !confirmPassword || !gender || !userType) {
       setError("Please fill all values.");
       return;
     }
@@ -95,6 +98,7 @@ const Register = () => {
         phone: mobile,
         password,
         gender,
+        userType,
       });
 
       setSnackbar({
@@ -169,6 +173,52 @@ const Register = () => {
 
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={2}>
+            <Grid size={12}>
+              <FormControl fullWidth size="medium">
+                <Typography
+                  component="label"
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#31516D",
+                    mb: 0.8,
+                  }}
+                >
+                  Account type
+                </Typography>
+                <Select
+                  name="userType"
+                  value={formData.userType}
+                  onChange={handleChange}
+                  displayEmpty
+                  inputProps={{ "aria-label": "Account type" }}
+                  sx={{
+                    height: 47,
+                    borderRadius: "11px",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "14px",
+                    color: "#172A43",
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#BDD3DF",
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#91B3C3",
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#3737E8",
+                      borderWidth: "1.5px",
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    Select how you will use RoomMate Finder
+                  </MenuItem>
+                  <MenuItem value={USER_TYPES.SEEKER}>Room seeker</MenuItem>
+                  <MenuItem value={USER_TYPES.OWNER}>Room owner / uploader</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Name"

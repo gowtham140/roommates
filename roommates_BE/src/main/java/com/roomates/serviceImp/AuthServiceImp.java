@@ -16,6 +16,7 @@ import com.roomates.exception.ResourceNotFoundException;
 import com.roomates.model.User;
 import com.roomates.repository.UserRepository;
 import com.roomates.security.TokenUtil;
+import com.roomates.security.UserTypes;
 import com.roomates.service.AuthService;
 import com.roomates.webModel.ApiResponse;
 import com.roomates.webModel.AuthResponse;
@@ -46,9 +47,14 @@ public class AuthServiceImp implements AuthService {
     @Transactional
     public ApiResponse<UserDto> register(RegisterRequest request) {
         String email = normalize(request.getEmail());
+        String userType = request.getUserType() == null ? "" : request.getUserType().trim();
 
         if (userRepository.existsByMailID(email)) {
             throw new BadRequestException("An account with this email already exists");
+        }
+
+        if (!UserTypes.OWNER.equals(userType) && !UserTypes.SEEKER.equals(userType)) {
+            throw new BadRequestException("Please select a valid account type");
         }
 
         User user = new User();
@@ -56,9 +62,10 @@ public class AuthServiceImp implements AuthService {
         user.setMailID(email);
         user.setPhone_no(request.getPhone().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setCpassword(request.getPassword());
         user.setGender(request.getGender());
         user.setAge(request.getAge());
-        user.setUserType("2");
+        user.setUserType(userType);
         user.setStatus(true);
         user.setIsDelete(false);
         user.setCreatedDate(new Date());

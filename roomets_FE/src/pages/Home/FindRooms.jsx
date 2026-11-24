@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
@@ -21,14 +21,22 @@ import {
 } from "@mui/material";
 import {
   ArrowForwardRounded,
+  ChevronLeftRounded,
+  ChevronRightRounded,
   FavoriteBorderRounded,
   FavoriteRounded,
   HomeRounded,
   LocationOnOutlined,
+  NearMeRounded,
   SearchOffRounded,
   SearchRounded,
 } from "@mui/icons-material";
 import { getRooms } from "../../API/roomsAPI";
+import { resolveImageUrl } from "../../API/app-config";
+import { useAuth } from "../../context/authContext";
+import useUserLocation from "../../hooks/useUserLocation";
+import { distanceKm, formatDistance } from "../../utils/geo";
+import { getSavedRoomIds, toggleSavedRoom } from "../../utils/savedRooms";
 
 const PAGE_SIZE = 6;
 
@@ -41,6 +49,8 @@ const FOOD_OPTIONS = [
 
 const FindRooms = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { position: userPosition, error: locationError, refresh: refreshLocation } = useUserLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filters = useMemo(
@@ -62,11 +72,15 @@ const FindRooms = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [savedRooms, setSavedRooms] = useState([]);
+  const [savedRooms, setSavedRooms] = useState(() => getSavedRoomIds(user?.id));
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
   });
+
+  useEffect(() => {
+    setSavedRooms(getSavedRoomIds(user?.id));
+  }, [user?.id]);
 
   const loadRooms = useCallback(() => {
     let active = true;
@@ -134,15 +148,11 @@ const FindRooms = () => {
   };
 
   const toggleSave = (roomId) => {
-    const isSaved = savedRooms.includes(roomId);
-    setSavedRooms((current) =>
-      isSaved
-        ? current.filter((id) => id !== roomId)
-        : [...current, roomId]
-    );
+    const { saved, ids } = toggleSavedRoom(user?.id, roomId);
+    setSavedRooms(ids);
     setSnackbar({
       open: true,
-      message: isSaved ? "Removed from saved rooms." : "Room saved.",
+      message: saved ? "Room saved." : "Removed from saved rooms.",
     });
   };
 
@@ -340,7 +350,28 @@ const FindRooms = () => {
             <Typography sx={{ fontSize: "13px", color: "#667085", mt: 0.3 }}>
               {loading ? "Searching rooms..." : `${totalElements} rooms found`}
             </Typography>
+            {locationError && (
+              <Typography sx={{ fontSize: 12, color: "#B42318", mt: 0.4 }}>
+                Location unavailable — {locationError}
+              </Typography>
+            )}
           </Box>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<NearMeRounded />}
+            onClick={refreshLocation}
+            sx={{
+              textTransform: "none",
+              fontWeight: 700,
+              borderRadius: "10px",
+              borderColor: "#B8E5DE",
+              color: "#0F9D8A",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {userPosition ? "Refresh location" : "Use my location"}
+          </Button>
         </Box>
 
         {loading ? (
@@ -440,6 +471,7 @@ const FindRooms = () => {
                 <Grid key={room.id} size={{ xs: 12, sm: 6, lg: 4 }}>
                   <RoomCard
                     room={room}
+                    userPosition={userPosition}
                     saved={savedRooms.includes(room.id)}
                     onSave={() => toggleSave(room.id)}
                     onView={() => navigate(`/rooms/${room.id}`)}
@@ -474,8 +506,9 @@ const FindRooms = () => {
   );
 };
 
-const RoomCard = ({ room, saved, onSave, onView }) => {
+const RoomCard = ({ room, userPosition, saved, onSave, onView }) => {
   const amenities = room.amenities || [];
+  const distanceLabel = formatDistance(distanceKm(userPosition, room));
 
   return (
     <Card
@@ -496,7 +529,7 @@ const RoomCard = ({ room, saved, onSave, onView }) => {
       }}
     >
       <Box sx={{ position: "relative", height: 210, overflow: "hidden" }}>
-        <RoomImage src={room.imageUrls?.[0]} alt={room.title} height="100%" />
+        <RoomImageCarousel images={room.imageUrls} alt={room.title} height={210} />
 
         {room.status && (
           <Chip
@@ -548,6 +581,24 @@ const RoomCard = ({ room, saved, onSave, onView }) => {
             "& .MuiChip-icon": { color: "#FFFFFF" },
           }}
         />
+
+        {distanceLabel && (
+          <Chip
+            icon={<NearMeRounded sx={{ fontSize: "16px !important" }} />}
+            label={distanceLabel}
+            title="Straight-line distance from your current location"
+            size="small"
+            sx={{
+              position: "absolute",
+              bottom: 12,
+              right: 12,
+              backgroundColor: "rgba(255,255,255,0.95)",
+              color: "#0F9D8A",
+              fontWeight: 700,
+              "& .MuiChip-icon": { color: "#0F9D8A" },
+            }}
+          />
+        )}
       </Box>
 
       <CardContent
@@ -641,9 +692,140 @@ const RoomCard = ({ room, saved, onSave, onView }) => {
   );
 };
 
+const RoomImageCarousel = ({ images, alt, height = 210 }) => {
+  const trackRef = useRef(null);
+  const [index, setIndex] = useState(0);
+  const slides = Array.isArray(images) && images.length > 0 ? images : [null];
+
+  const goTo = (nextIndex) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const clamped = Math.min(Math.max(nextIndex, 0), slides.length - 1);
+    track.scrollTo({ left: clamped * track.clientWidth, behavior: "smooth" });
+    setIndex(clamped);
+  };
+
+  const handleScroll = () => {
+    const track = trackRef.current;
+    if (!track || !track.clientWidth) return;
+    setIndex(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
+  if (slides.length === 1) {
+    return <RoomImage src={slides[0]} alt={alt} height={height} />;
+  }
+
+  return (
+    <Box sx={{ position: "relative", height, overflow: "hidden" }}>
+      <Box
+        ref={trackRef}
+        onScroll={handleScroll}
+        sx={{
+          display: "flex",
+          height: "100%",
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
+        }}
+      >
+        {slides.map((src, slideIndex) => (
+          <Box
+            key={`${src || "placeholder"}-${slideIndex}`}
+            sx={{ flex: "0 0 100%", height: "100%", scrollSnapAlign: "start" }}
+          >
+            <RoomImage src={src} alt={`${alt || "Room"} ${slideIndex + 1}`} height="100%" />
+          </Box>
+        ))}
+      </Box>
+
+      <IconButton
+        aria-label="Previous image"
+        onClick={(event) => {
+          event.stopPropagation();
+          goTo(index - 1);
+        }}
+        disabled={index === 0}
+        sx={arrowStyles({ left: 8 })}
+      >
+        <ChevronLeftRounded />
+      </IconButton>
+      <IconButton
+        aria-label="Next image"
+        onClick={(event) => {
+          event.stopPropagation();
+          goTo(index + 1);
+        }}
+        disabled={index === slides.length - 1}
+        sx={arrowStyles({ right: 8 })}
+      >
+        <ChevronRightRounded />
+      </IconButton>
+
+      <Box
+        sx={{
+          position: "absolute",
+          top: 12,
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          alignItems: "center",
+          gap: 0.6,
+          px: 1.1,
+          py: 0.45,
+          borderRadius: "999px",
+          backgroundColor: "rgba(20,42,74,0.72)",
+        }}
+      >
+        {slides.map((_, dotIndex) => (
+          <Box
+            key={dotIndex}
+            component="button"
+            type="button"
+            aria-label={`Show image ${dotIndex + 1}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              goTo(dotIndex);
+            }}
+            sx={{
+              p: 0,
+              border: 0,
+              cursor: "pointer",
+              width: dotIndex === index ? 16 : 6,
+              height: 6,
+              borderRadius: "999px",
+              backgroundColor: dotIndex === index ? "#FFFFFF" : "rgba(255,255,255,0.55)",
+              transition: "width 0.2s ease, background-color 0.2s ease",
+            }}
+          />
+        ))}
+        <Typography sx={{ color: "#FFFFFF", fontSize: 11, fontWeight: 700, ml: 0.3 }}>
+          {index + 1}/{slides.length}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
+const arrowStyles = ({ left, right }) => ({
+  position: "absolute",
+  top: "50%",
+  left,
+  right,
+  transform: "translateY(-50%)",
+  width: 34,
+  height: 34,
+  backgroundColor: "rgba(255,255,255,0.94)",
+  color: "#17233C",
+  "&:hover": { backgroundColor: "#FFFFFF" },
+  "&.Mui-disabled": { opacity: 0.35, backgroundColor: "rgba(255,255,255,0.8)" },
+});
+
 export const RoomImage = ({ src, alt, height = 220, sx }) => {
   const [brokenSrc, setBrokenSrc] = useState(null);
-  const isBroken = !src || brokenSrc === src;
+  const resolvedSrc = resolveImageUrl(src);
+  const isBroken = !resolvedSrc || brokenSrc === resolvedSrc;
 
   if (isBroken) {
     return (
@@ -667,9 +849,9 @@ export const RoomImage = ({ src, alt, height = 220, sx }) => {
   return (
     <Box
       component="img"
-      src={src}
+      src={resolvedSrc}
       alt={alt || "Room"}
-      onError={() => setBrokenSrc(src)}
+      onError={() => setBrokenSrc(resolvedSrc)}
       sx={{
         height,
         width: "100%",

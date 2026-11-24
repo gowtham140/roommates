@@ -22,7 +22,10 @@ import {
   Typography,
 } from "@mui/material";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import { createRoom, getRoom, updateRoom, uploadImages } from "../../API/roomsAPI";
+import { resolveImageUrl } from "../../API/app-config";
+import MapPicker from "../../components/maps/MapPicker";
 import { useAuth } from "../../context/authContext";
 
 const AMENITIES = [
@@ -87,6 +90,7 @@ const PostRoom = () => {
     handleSubmit,
     control,
     reset,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(roomSchema),
@@ -94,6 +98,8 @@ const PostRoom = () => {
   });
 
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [pickedLocation, setPickedLocation] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [loadingRoom, setLoadingRoom] = useState(Boolean(editId));
   const [submitting, setSubmitting] = useState(false);
@@ -117,6 +123,13 @@ const PostRoom = () => {
       .then((data) => {
         if (!active || !data) return;
         setEditingRoom(data);
+        if (data.latitude != null && data.longitude != null) {
+          setPickedLocation({
+            location: data.location || "",
+            latitude: Number(data.latitude),
+            longitude: Number(data.longitude),
+          });
+        }
         reset({
           title: data.title || "",
           description: data.description || "",
@@ -183,6 +196,8 @@ const PostRoom = () => {
         availableFrom: values.availableFrom,
         amenities: values.amenities,
         imageUrls,
+        latitude: pickedLocation?.latitude ?? null,
+        longitude: pickedLocation?.longitude ?? null,
       };
 
       const saved = editId
@@ -222,6 +237,12 @@ const PostRoom = () => {
     error: Boolean(errors[name]),
     helperText: errors[name]?.message || "",
   });
+
+  const handleMapSelect = (selection) => {
+    setPickedLocation(selection);
+    setValue("location", selection.location, { shouldValidate: true });
+    setMapOpen(false);
+  };
 
   return (
     <Box
@@ -303,6 +324,19 @@ const PostRoom = () => {
                   {...textField("location")}
                   sx={fieldStyles}
                 />
+                <Button
+                  size="small"
+                  startIcon={<PlaceRounded />}
+                  onClick={() => setMapOpen(true)}
+                  sx={{ mt: 0.8, textTransform: "none", fontWeight: 700, color: "#3730E8" }}
+                >
+                  Choose on map
+                </Button>
+                {pickedLocation && (
+                  <Typography sx={{ fontSize: 12, color: "#0F9D8A", mt: 0.4 }}>
+                    Pinned: {pickedLocation.latitude.toFixed(4)}, {pickedLocation.longitude.toFixed(4)}
+                  </Typography>
+                )}
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -520,7 +554,7 @@ const PostRoom = () => {
                   <Box
                     component="img"
                     key={`${url}-${index}`}
-                    src={url}
+                    src={resolveImageUrl(url)}
                     alt={`Existing room ${index + 1}`}
                     sx={{
                       width: 110,
@@ -601,6 +635,13 @@ const PostRoom = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <MapPicker
+        open={mapOpen}
+        initial={pickedLocation}
+        onClose={() => setMapOpen(false)}
+        onSelect={handleMapSelect}
+      />
     </Box>
   );
 };

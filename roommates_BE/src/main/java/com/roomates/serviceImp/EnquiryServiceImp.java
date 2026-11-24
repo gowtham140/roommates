@@ -13,6 +13,7 @@ import com.roomates.model.User;
 import com.roomates.repository.EnquiryRepository;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
 import com.roomates.service.EnquiryService;
 import com.roomates.webModel.EnquiryRequest;
 import com.roomates.webModel.EnquiryResponse;
@@ -44,6 +45,7 @@ public class EnquiryServiceImp implements EnquiryService {
 
         User seeker = userRepository.findById(seekerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        requireSeeker(seeker);
 
         if (room.getOwner() != null && room.getOwner().getId().equals(seekerId)) {
             throw new BadRequestException("You cannot enquire on your own room");
@@ -93,12 +95,27 @@ public class EnquiryServiceImp implements EnquiryService {
         if (room == null || room.getOwner() == null || !room.getOwner().getId().equals(ownerId)) {
             throw new BadRequestException("You can only manage enquiries for your own rooms");
         }
+        requireRoomManager(ownerId);
         if (!ALLOWED_STATUSES.contains(status)) {
             throw new BadRequestException("Invalid enquiry status");
         }
 
         enquiry.setStatus(status);
         enquiryRepository.save(enquiry);
+    }
+
+    private void requireSeeker(User user) {
+        if (!UserTypes.SEEKER.equals(user.getUserType())) {
+            throw new BadRequestException("Only room seekers can send enquiries");
+        }
+    }
+
+    private void requireRoomManager(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!UserTypes.OWNER.equals(user.getUserType()) && !UserTypes.ADMIN.equals(user.getUserType())) {
+            throw new BadRequestException("Only room owners can manage enquiries");
+        }
     }
 
     private EnquiryResponse toResponse(Enquiry enquiry) {

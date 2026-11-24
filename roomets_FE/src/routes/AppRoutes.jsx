@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import { Box, Container, Typography } from "@mui/material";
 
 import AppLayout from "../components/layout/AppLayout";
+import AdminRoute from "../components/layout/AdminRoute";
 import ProtectedRoute from "../components/layout/ProtectedRoute";
 
 import Register from "../pages/auth/Register";
@@ -16,6 +17,7 @@ import RoomDetail from "../pages/Home/RoomDetail";
 import PostRoom from "../pages/Home/PostRoom";
 import MyRooms from "../pages/Home/MyRooms";
 import MyEnquiries from "../pages/Enquiries/MyEnquiries";
+import AdminDashboard from "../pages/Admin/AdminDashboard";
 
 const Page = ({ title, subtitle }) => (
   <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -54,6 +56,12 @@ const AppRoutes = () => (
         <Route path="my-rooms" element={<MyRooms />} />
         <Route path="enquiries" element={<MyEnquiries />} />
         <Route path="profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AdminRoute />}>
+          <Route path="admin" element={<AdminDashboard />} />
+        </Route>
       </Route>
 
       <Route

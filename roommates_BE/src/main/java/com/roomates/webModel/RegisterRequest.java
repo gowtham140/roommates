@@ -24,6 +24,8 @@ public class RegisterRequest {
 
     private String gender;
 
+    private String userType;
+
     private Integer age;
 
     public String getName() {
@@ -64,6 +66,14 @@ public class RegisterRequest {
 
     public void setGender(String gender) {
         this.gender = gender;
+    }
+
+    public String getUserType() {
+        return userType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
     }
 
     public Integer getAge() {

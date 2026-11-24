@@ -83,6 +83,7 @@ class RoomServiceImpTest {
         User owner = new User();
         owner.setId(1);
         owner.setName("Owner");
+        owner.setUserType("2");
 
         when(userRepository.findById(1)).thenReturn(Optional.of(owner));
         when(roomRepository.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));

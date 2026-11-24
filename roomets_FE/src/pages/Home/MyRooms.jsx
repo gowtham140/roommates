@@ -23,6 +23,8 @@ import { deleteRoom, getMyRooms, updateRoom } from "../../API/roomsAPI";
 import { useAuth } from "../../context/authContext";
 import { RoomImage } from "./FindRooms";
 
+const ADMIN_BLOCKED = ["BLOCKED", "BLOCKED_BY_USER"];
+
 const MyRooms = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -77,6 +79,8 @@ const MyRooms = () => {
       amenities: Array.isArray(room.amenities) ? room.amenities : [],
       imageUrls: Array.isArray(room.imageUrls) ? room.imageUrls : [],
       status: nextStatus,
+      latitude: room.latitude ?? null,
+      longitude: room.longitude ?? null,
     };
 
     try {
@@ -258,15 +262,26 @@ const MyRooms = () => {
                       height="100%"
                     />
                     <Chip
-                      label={room.status || "ACTIVE"}
+                      label={
+                        ADMIN_BLOCKED.includes(room.status)
+                          ? "Blocked by admin"
+                          : room.status || "ACTIVE"
+                      }
                       size="small"
                       sx={{
                         position: "absolute",
                         top: 12,
                         left: 12,
-                        backgroundColor:
-                          room.status === "RENTED" ? "#FFF3E0" : "#E4F8F4",
-                        color: room.status === "RENTED" ? "#B35B00" : "#0F9D8A",
+                        backgroundColor: ADMIN_BLOCKED.includes(room.status)
+                          ? "#FEE4E2"
+                          : room.status === "RENTED"
+                          ? "#FFF3E0"
+                          : "#E4F8F4",
+                        color: ADMIN_BLOCKED.includes(room.status)
+                          ? "#B42318"
+                          : room.status === "RENTED"
+                          ? "#B35B00"
+                          : "#0F9D8A",
                         fontWeight: 700,
                       }}
                     />
@@ -318,7 +333,7 @@ const MyRooms = () => {
                       <Button
                         variant="outlined"
                         onClick={() => navigate(`/post-room?edit=${room.id}`)}
-                        disabled={busyId === room.id}
+                        disabled={busyId === room.id || ADMIN_BLOCKED.includes(room.status)}
                         sx={smallButtonStyles}
                       >
                         Edit
@@ -326,7 +341,7 @@ const MyRooms = () => {
                       <Button
                         variant="outlined"
                         onClick={() => handleStatus(room)}
-                        disabled={busyId === room.id}
+                        disabled={busyId === room.id || ADMIN_BLOCKED.includes(room.status)}
                         sx={{
                           ...smallButtonStyles,
                           borderColor: "#B8E5DE",
@@ -339,6 +354,8 @@ const MyRooms = () => {
                       >
                         {busyId === room.id ? (
                           <CircularProgress size={17} color="inherit" />
+                        ) : ADMIN_BLOCKED.includes(room.status) ? (
+                          "Blocked by admin"
                         ) : room.status === "ACTIVE" ? (
                           "Mark as Rented"
                         ) : (
@@ -349,7 +366,7 @@ const MyRooms = () => {
                         variant="text"
                         color="error"
                         onClick={() => setDeleteTarget(room)}
-                        disabled={busyId === room.id}
+                        disabled={busyId === room.id || ADMIN_BLOCKED.includes(room.status)}
                         sx={{
                           gridColumn: "1 / -1",
                           borderRadius: "10px",
