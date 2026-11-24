@@ -19,20 +19,11 @@ public class AuthUserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
-
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByMailID(email);
-
         if (user == null) {
-            throw new UsernameNotFoundException(
-                    "User not found: " + email
-            );
+            throw new UsernameNotFoundException("Invalid email or password");
         }
-
-        return new AuthUser(
-                user,
-                java.util.List.of()
-        );
+        return AuthUser.from(user);
     }
 }

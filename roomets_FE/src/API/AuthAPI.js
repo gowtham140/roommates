@@ -1,46 +1,43 @@
 import axios from "axios";
-import { createBrowserHistory } from "history";
-import AuthService from "../session/AuthService.js";
-import http from "./http.js";
-import * as APPCONFIG from "./app-config.js";
+import AuthService from "../session/AuthService";
+import { API_URL } from "./app-config";
 
-const history = createBrowserHistory();
-// Create axios instance
-var axiosApi = axios.create({
-  headers: http.AUTH_HEADERS(),
-  baseURL: APPCONFIG.API_URL,
+const client = axios.create({
+  baseURL: API_URL,
+  headers: { Accept: "application/json" },
 });
 
-// Axios response interceptor
-axiosApi.interceptors.response.use(
-  function (response) {
-    return response;
-  },
-  function (error) {
-    if (error && error.response) {
-      console.error("error:::", error);
-      if (error.response.status) {
-        switch (error.response.status) {
-          case 401:
-            AuthService.removeAuth(); // Remove authentication details
-            history.push("/Duracan/login");
-            window.location.reload();
-            break;
-          case 503:
-            history.push("/Duracan/login");
-            // Handle service unavailable error here (if needed)
-            break;
-          default:
-            history.push("/Duracan/login");
-            // Handle other error status codes if needed
-            break;
-        }
+client.interceptors.request.use((config) => {
+  const token = AuthService.getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
+  return config;
+});
+
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    if (status === 401) {
+      AuthService.removeAuth();
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login");
       }
     }
 
-    // Return the error to be handled by the calling code
-    return Promise.reject(error);
+    const data = error.response?.data;
+    const message =
+      data?.message ||
+      (typeof data === "string" ? data : null) ||
+      error.message ||
+      "Something went wrong";
+
+    return Promise.reject(new Error(message));
   }
 );
 
-export default axiosApi;
+export default client;

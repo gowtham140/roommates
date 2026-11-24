@@ -1,35 +1,46 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
+  CircularProgress,
+  FormControl,
   FormControlLabel,
   Grid,
+  MenuItem,
   Paper,
+  Select,
+  Snackbar,
   TextField,
   Typography,
   Link,
 } from "@mui/material";
-
 import { Link as RouterLink } from "react-router-dom";
-import { useState } from "react";
-import MD5 from "crypto-js/md5";
-import { createUser } from "../../API/request";
-
+import { register } from "../../API/authAPI";
 
 const Register = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     mobile: "",
     password: "",
     confirmPassword: "",
+    gender: "",
     agreed: false,
   });
-  
 
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-  // Handle input changes
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
 
@@ -38,50 +49,68 @@ const Register = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    // Clear error while user is typing
     setError("");
   };
 
-  // Submit form
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Password validation
-    if (formData.password !== formData.confirmPassword) {
+    const {
+      name,
+      email,
+      mobile,
+      password,
+      confirmPassword,
+      gender,
+      agreed,
+    } = formData;
+
+    if (!name || !email || !mobile || !password || !confirmPassword || !gender) {
+      setError("Please fill all values.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
       setError("Password and confirm password must be the same.");
       return;
     }
 
-    if(formData.email === '' || formData.mobile === '' || formData.name === '' || formData.password === ''){
-       setError("Please fill all values.");
-      return;
-    }
-
-    // Agreement validation
-    if (!formData.agreed) {
+    if (!agreed) {
       setError("Please accept the community guidelines.");
       return;
     }
 
-    // JSON object for API
-    const requestData = {
-      name: formData.name,
-      email: formData.email,
-      mobile: formData.mobile,
-      password: formData.password,
-      cpassword: MD5(formData.password).toString()
+    setSubmitting(true);
+    setError("");
 
-    };
+    try {
+      await register({
+        name,
+        email,
+        phone: mobile,
+        password,
+        gender,
+      });
 
-    console.log("API Request JSON:", requestData);
+      setSnackbar({
+        open: true,
+        message: "Account created. Please log in.",
+        severity: "success",
+      });
 
-    createUser(requestData).then(res=>{
-
-    }).catch(err=>{
-      console.log(err);
-      
-    })
-
+      setTimeout(() => navigate("/login"), 1200);
+    } catch (err) {
+      const message = err?.message || "Registration failed. Please try again.";
+      setError(message);
+      setSnackbar({ open: true, message, severity: "error" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -109,7 +138,6 @@ const Register = () => {
           boxShadow: "0 10px 30px rgba(30, 70, 90, 0.06)",
         }}
       >
-        {/* Heading */}
         <Typography
           variant="h4"
           sx={{
@@ -139,11 +167,8 @@ const Register = () => {
           Chennai.
         </Typography>
 
-        {/* Form */}
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={2}>
-
-            {/* Name */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Name"
@@ -153,7 +178,6 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Email */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Email"
@@ -164,7 +188,6 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Mobile */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Mobile number"
@@ -175,7 +198,6 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Password */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Password"
@@ -186,7 +208,6 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Confirm Password */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormField
                 label="Confirm password"
@@ -197,7 +218,53 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Agreement */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControl fullWidth size="medium">
+                <Typography
+                  component="label"
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#31516D",
+                    mb: 0.8,
+                  }}
+                >
+                  Gender
+                </Typography>
+                <Select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  displayEmpty
+                  inputProps={{ "aria-label": "Gender" }}
+                  sx={{
+                    height: 47,
+                    borderRadius: "11px",
+                    backgroundColor: "#FFFFFF",
+                    fontSize: "14px",
+                    color: "#172A43",
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#BDD3DF",
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#91B3C3",
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#3737E8",
+                      borderWidth: "1.5px",
+                    },
+                  }}
+                >
+                  <MenuItem value="" disabled>
+                    Select gender
+                  </MenuItem>
+                  <MenuItem value="MALE">Male</MenuItem>
+                  <MenuItem value="FEMALE">Female</MenuItem>
+                  <MenuItem value="OTHER">Other</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
             <Grid
               size={{ xs: 12, sm: 6 }}
               sx={{
@@ -216,7 +283,6 @@ const Register = () => {
                       color: "#7A8794",
                       p: 0.5,
                       mt: 0.2,
-
                       "&.Mui-checked": {
                         color: "#3730E8",
                       },
@@ -242,37 +308,38 @@ const Register = () => {
               />
             </Grid>
 
-            {/* Error */}
             {error && (
               <Grid size={12}>
-                <Typography
+                <Alert
+                  severity="error"
                   sx={{
-                    color: "#D32F2F",
+                    borderRadius: "10px",
                     fontSize: "13px",
-                    mt: -0.5,
                   }}
                 >
                   {error}
-                </Typography>
+                </Alert>
               </Grid>
             )}
 
-            {/* Create Account */}
             <Grid size={12}>
               <Button
                 fullWidth
                 variant="contained"
                 type="submit"
+                disabled={submitting}
+                startIcon={
+                  submitting ? <CircularProgress size={18} color="inherit" /> : null
+                }
                 sx={{
                   height: 49,
                   mt: 0.5,
                   borderRadius: "11px",
-                  backgroundColor: "#3737E8",
+                  backgroundColor: "#3730E8",
                   textTransform: "none",
                   fontSize: "15px",
                   fontWeight: 700,
                   boxShadow: "none",
-
                   "&:hover": {
                     backgroundColor: "#2F30D1",
                     boxShadow: "none",
@@ -285,7 +352,6 @@ const Register = () => {
           </Grid>
         </Box>
 
-        {/* Login */}
         <Box
           sx={{
             display: "flex",
@@ -307,7 +373,6 @@ const Register = () => {
               sx={{
                 color: "#4218E8",
                 fontWeight: 700,
-
                 "&:hover": {
                   textDecoration: "underline",
                 },
@@ -318,20 +383,27 @@ const Register = () => {
           </Typography>
         </Box>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
-/*
- * Reusable form field
- */
-const FormField = ({
-  label,
-  name,
-  type = "text",
-  value,
-  onChange,
-}) => {
+const FormField = ({ label, name, type = "text", value, onChange }) => {
   return (
     <Box>
       <Typography
@@ -360,21 +432,17 @@ const FormField = ({
             height: 47,
             borderRadius: "11px",
             backgroundColor: "#FFFFFF",
-
             "& fieldset": {
               borderColor: "#BDD3DF",
             },
-
             "&:hover fieldset": {
               borderColor: "#91B3C3",
             },
-
             "&.Mui-focused fieldset": {
-              borderColor: "#3737E8",
+              borderColor: "#3730E8",
               borderWidth: "1.5px",
             },
           },
-
           "& .MuiOutlinedInput-input": {
             fontSize: "14px",
             color: "#172A43",

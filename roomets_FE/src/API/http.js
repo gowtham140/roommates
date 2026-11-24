@@ -1,28 +1,18 @@
 import AuthService from "../session/AuthService";
 
-
 const http = {
-  HEADERS: () => {
-    return {
-      "Content-Type": "application/json",
-      Accept: "*/*",
-      Authorization: "JWT fefege...",
-    };
-  },
-  AUTH_HEADERS: () => {
-    return {
-      "Content-Type": "application/json",
-      Accept: "*/*",
-      Authorization: AuthService.getToken(),
-    };
-  },
-  MULTIPART_HEADERS: () => {
-    return {
-      "Content-Type": "multipart/form-data",
-      Accept: "*/*",
-      Authorization: AuthService.getToken(),
-    };
-  },
+  HEADERS: () => ({
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  }),
+  AUTH_HEADERS: () => ({
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${AuthService.getToken() || ""}`,
+  }),
+  MULTIPART_HEADERS: () => ({
+    Accept: "application/json",
+  }),
 };
 
 export default http;

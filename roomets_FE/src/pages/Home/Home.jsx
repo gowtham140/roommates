@@ -26,8 +26,13 @@ import { useNavigate } from "react-router-dom";
 const Home = () => {
   const navigate = useNavigate();
 
-  const handleSearch = () => {
-    navigate("/rooms");
+  const handleSearch = (params = {}) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+    const search = query.toString();
+    navigate(search ? `/rooms?${search}` : "/rooms");
   };
 
   return (
@@ -163,7 +168,7 @@ const Home = () => {
             >
               <Button
                 variant="contained"
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 sx={{
                   height: 49,
 
@@ -193,7 +198,7 @@ const Home = () => {
 
               <Button
                 variant="outlined"
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 sx={{
                   height: 49,
 
@@ -294,7 +299,7 @@ const Home = () => {
             </Box>
 
             <Button
-              onClick={handleSearch}
+              onClick={() => handleSearch()}
               endIcon={<ArrowForwardIcon />}
               sx={{
                 display: {
@@ -344,7 +349,33 @@ const RoomSearchBox = ({ onSearch }) => {
       component="form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSearch();
+        const form = event.currentTarget;
+        const location = form.elements.location?.value;
+        const budget = form.elements.budget?.value;
+        const gender = form.elements.gender?.value;
+        const params = {};
+
+        if (location && location !== "Any Chennai area") {
+          params.location = location;
+        }
+        if (budget === "Below ₹5,000") params.maxRent = "5000";
+        if (budget === "₹5,000 - ₹8,000") {
+          params.minRent = "5000";
+          params.maxRent = "8000";
+        }
+        if (budget === "₹8,000 - ₹12,000") {
+          params.minRent = "8000";
+          params.maxRent = "12000";
+        }
+        if (budget === "₹12,000 - ₹18,000") {
+          params.minRent = "12000";
+          params.maxRent = "18000";
+        }
+        if (budget === "Above ₹18,000") params.minRent = "18000";
+        if (gender === "Male") params.gender = "MALE";
+        if (gender === "Female") params.gender = "FEMALE";
+
+        onSearch(params);
       }}
       sx={{
         width: "100%",
@@ -369,6 +400,7 @@ const RoomSearchBox = ({ onSearch }) => {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <FilterSelect
+            name="location"
             label="Location"
             options={[
               "Any Chennai area",
@@ -387,6 +419,7 @@ const RoomSearchBox = ({ onSearch }) => {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <FilterSelect
+            name="budget"
             label="Budget"
             options={[
               "Any budget",
@@ -403,6 +436,7 @@ const RoomSearchBox = ({ onSearch }) => {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <FilterSelect
+            name="gender"
             label="Gender preference"
             options={[
               "Any",
@@ -417,6 +451,7 @@ const RoomSearchBox = ({ onSearch }) => {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <FilterSelect
+            name="food"
             label="Food preference"
             options={[
               "Any food preference",
@@ -507,7 +542,7 @@ const RoomSearchBox = ({ onSearch }) => {
    SELECT
 ===================================================== */
 
-const FilterSelect = ({ label, options }) => {
+const FilterSelect = ({ name, label, options }) => {
   return (
     <FormControl fullWidth>
       <InputLabel
@@ -530,6 +565,7 @@ const FilterSelect = ({ label, options }) => {
       </InputLabel>
 
       <Select
+        name={name}
         defaultValue={options[0]}
         size="small"
         sx={{

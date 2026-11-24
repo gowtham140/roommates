@@ -1,12 +1,24 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
+  Snackbar,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -17,10 +29,60 @@ import {
   ReportOutlined,
 } from "@mui/icons-material";
 
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { submitReport } from "../../API/reportsAPI";
 
 const Safety = () => {
-  const navigate = useNavigate();
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("Inappropriate behaviour");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const openReportDialog = (reason) => {
+    setReportReason(reason);
+    setReportDetails("");
+    setReportOpen(true);
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportReason || !reportDetails.trim()) {
+      setSnackbar({
+        open: true,
+        message: "Please choose a reason and add a few details.",
+        severity: "error",
+      });
+      return;
+    }
+
+    setReportSubmitting(true);
+
+    try {
+      await submitReport({
+        reason: reportReason,
+        details: reportDetails.trim(),
+      });
+
+      setReportOpen(false);
+      setSnackbar({
+        open: true,
+        message: "Thank you. Your report has been submitted.",
+        severity: "success",
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err?.message || "Unable to submit your report.",
+        severity: "error",
+      });
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   const safetyFeatures = [
     {
@@ -275,10 +337,7 @@ const Safety = () => {
             <Button
               variant="outlined"
               startIcon={<ReportOutlined />}
-              onClick={() => {
-                // Later connect this to report modal/API
-                console.log("Report user");
-              }}
+              onClick={() => openReportDialog("Inappropriate behaviour")}
               sx={{
                 height: 49,
 
@@ -308,10 +367,7 @@ const Safety = () => {
 
             <Button
               variant="outlined"
-              onClick={() => {
-                // Later connect this to block modal/API
-                console.log("Block user");
-              }}
+              onClick={() => openReportDialog("Block request")}
               sx={{
                 height: 49,
 
@@ -340,6 +396,104 @@ const Safety = () => {
             </Button>
           </Box>
         </Paper>
+
+        <Dialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: "20px" } }}
+        >
+          <DialogTitle sx={{ fontWeight: 700, color: "#17233C" }}>
+            Submit a report
+          </DialogTitle>
+          <DialogContent>
+            <Typography sx={{ fontSize: "14px", color: "#667085", mb: 2 }}>
+              Tell us what happened. Reports are reviewed privately by our
+              support team.
+            </Typography>
+
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="report-reason-label">Reason</InputLabel>
+              <Select
+                labelId="report-reason-label"
+                label="Reason"
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+                sx={{ borderRadius: "11px" }}
+              >
+                <MenuItem value="Inappropriate behaviour">
+                  Inappropriate behaviour
+                </MenuItem>
+                <MenuItem value="Fake or misleading listing">
+                  Fake or misleading listing
+                </MenuItem>
+                <MenuItem value="Harassment">Harassment</MenuItem>
+                <MenuItem value="Block request">Block request</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              multiline
+              minRows={4}
+              label="Details"
+              placeholder="Describe the issue..."
+              value={reportDetails}
+              onChange={(event) => setReportDetails(event.target.value)}
+              sx={{
+                "& .MuiOutlinedInput-root": { borderRadius: "11px" },
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button
+              onClick={() => setReportOpen(false)}
+              sx={{ color: "#667085", textTransform: "none", fontWeight: 700 }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleReportSubmit}
+              disabled={reportSubmitting}
+              startIcon={
+                reportSubmitting ? (
+                  <CircularProgress size={17} color="inherit" />
+                ) : null
+              }
+              sx={{
+                height: 44,
+                px: 2.5,
+                borderRadius: "11px",
+                backgroundColor: "#3730E8",
+                textTransform: "none",
+                fontWeight: 700,
+                boxShadow: "none",
+                "&:hover": { backgroundColor: "#2F30D1", boxShadow: "none" },
+              }}
+            >
+              Submit report
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            severity={snackbar.severity}
+            variant="filled"
+            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Container>
     </Box>
   );

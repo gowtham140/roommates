@@ -1,14 +1,21 @@
-import { Routes, Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { Box, Container, Typography } from "@mui/material";
 
 import AppLayout from "../components/layout/AppLayout";
+import ProtectedRoute from "../components/layout/ProtectedRoute";
 
 import Register from "../pages/auth/Register";
 import Login from "../pages/auth/Login";
+import Profile from "../pages/auth/Profile";
+import ForgotPassword from "../pages/auth/ForgotPassword";
 import Home from "../pages/Home/Home";
 import HowItWorks from "../pages/Home/HowItWorks";
 import Safety from "../pages/Home/Safety";
 import FindRooms from "../pages/Home/FindRooms";
+import RoomDetail from "../pages/Home/RoomDetail";
+import PostRoom from "../pages/Home/PostRoom";
+import MyRooms from "../pages/Home/MyRooms";
+import MyEnquiries from "../pages/Enquiries/MyEnquiries";
 
 const Page = ({ title, subtitle }) => (
   <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -20,88 +27,46 @@ const Page = ({ title, subtitle }) => (
         p: 5,
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{
-          fontWeight: 700,
-          color: "#17233C",
-          mb: 1,
-        }}
-      >
+      <Typography variant="h4" sx={{ fontWeight: 700, color: "#17233C", mb: 1 }}>
         {title}
       </Typography>
-
-      <Typography
-        variant="body1"
-        sx={{
-          color: "#475467",
-        }}
-      >
+      <Typography variant="body1" sx={{ color: "#475467" }}>
         {subtitle}
       </Typography>
     </Box>
   </Container>
 );
 
-const AppRoutes = () => {
-  return (
-    <Routes>
-      <Route element={<AppLayout />}>
+const AppRoutes = () => (
+  <Routes>
+    <Route element={<AppLayout />}>
+      <Route index element={<Home />} />
+      <Route path="rooms" element={<FindRooms />} />
+      <Route path="rooms/:id" element={<RoomDetail />} />
+      <Route path="how-it-works" element={<HowItWorks />} />
+      <Route path="safety" element={<Safety />} />
+      <Route path="login" element={<Login />} />
+      <Route path="register" element={<Register />} />
+      <Route path="forgot-password" element={<ForgotPassword />} />
 
-        {/* Home */}
-        <Route
-          index
-          element={
-            <Home />
-          }
-        />
-
-        {/* Find Rooms */}
-        <Route
-          path="rooms"
-          element={<FindRooms /> }
-        />
-
-        {/* How It Works */}
-        <Route
-          path="how-it-works"
-          element={
-            <HowItWorks />
-          }
-        />
-
-        {/* Safety */}
-        <Route
-          path="safety"
-          element={<Safety />}
-        />
-
-        {/* Login */}
-        <Route
-          path="login"
-          element={<Login />}
-        />
-
-        {/* Register */}
-        <Route
-          path="register"
-          element={<Register />}
-        />
-
-        {/* 404 */}
-        <Route
-          path="*"
-          element={
-            <Page
-              title="Page Not Found"
-              subtitle="The page you are looking for does not exist."
-            />
-          }
-        />
-
+      <Route element={<ProtectedRoute />}>
+        <Route path="post-room" element={<PostRoom />} />
+        <Route path="my-rooms" element={<MyRooms />} />
+        <Route path="enquiries" element={<MyEnquiries />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
-    </Routes>
-  );
-};
+
+      <Route
+        path="*"
+        element={
+          <Page
+            title="Page Not Found"
+            subtitle="The page you are looking for does not exist."
+          />
+        }
+      />
+    </Route>
+  </Routes>
+);
 
 export default AppRoutes;

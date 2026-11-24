@@ -1,7 +1,8 @@
 package com.roomates.model;
 
-
 import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,12 +10,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "users_tb")
-@JsonIgnoreProperties
+@Table(name = "users_tb", uniqueConstraints = @UniqueConstraint(name = "uk_users_email", columnNames = "mailID"))
+@JsonIgnoreProperties({ "password", "cpassword" })
 public class User {
 
 	@Id
@@ -22,7 +22,7 @@ public class User {
 	@Column(name = "id")
 	private Integer id;
 
-	@Column(name = "mailID")
+	@Column(name = "mailID", nullable = false)
 	private String mailID;
 
 	@Column(name = "userType")
@@ -45,13 +45,17 @@ public class User {
 
 	@Column(name = "status")
 	private Boolean status;
-	
+
+	@Column(name = "gender")
 	private String gender;
+
+	@Column(name = "age")
+	private Integer age;
 
 	@Column(name = "createdDate", updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
 	private Date createdDate;
 
-	@Column(name = "updatedDate", updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+	@Column(name = "updatedDate", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
 	private Date updatedDate;
 
 	public Integer getId() {
@@ -126,6 +130,22 @@ public class User {
 		this.status = status;
 	}
 
+	public String getGender() {
+		return gender;
+	}
+
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+
+	public Integer getAge() {
+		return age;
+	}
+
+	public void setAge(Integer age) {
+		this.age = age;
+	}
+
 	public Date getCreatedDate() {
 		return createdDate;
 	}
@@ -141,24 +161,11 @@ public class User {
 	public void setUpdatedDate(Date updatedDate) {
 		this.updatedDate = updatedDate;
 	}
-	
-	
-
-	public String getGender() {
-		return gender;
-	}
-
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
 
 	@Override
 	public String toString() {
-		return "User [id=" + id + ", mailID=" + mailID + ", userType=" + userType + ", phone_no=" + phone_no + ", name="
-				+ name + ", isDelete=" + isDelete + ", password=" + password + ", cpassword=" + cpassword + ", status="
-				+ status + ", createdDate=" + createdDate + ", updatedDate=" + updatedDate + "]";
+		return "User [id=" + id + ", mailID=" + mailID + ", userType=" + userType + ", phone_no=" + phone_no
+				+ ", name=" + name + ", isDelete=" + isDelete + ", status=" + status + ", gender=" + gender
+				+ ", age=" + age + ", createdDate=" + createdDate + ", updatedDate=" + updatedDate + "]";
 	}
-	
-	
-
 }

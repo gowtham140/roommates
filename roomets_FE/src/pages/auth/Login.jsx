@@ -1,18 +1,74 @@
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
+  CircularProgress,
   Divider,
   FormControlLabel,
   Paper,
+  Snackbar,
   TextField,
   Typography,
   Link,
 } from "@mui/material";
-
 import { Link as RouterLink } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState(
+    () => localStorage.getItem("rememberedEmail") || ""
+  );
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(
+    () => Boolean(localStorage.getItem("rememberedEmail"))
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "error",
+  });
+
+  const performLogin = async (loginEmail, loginPassword) => {
+    if (!loginEmail || !loginPassword) {
+      setSnackbar({
+        open: true,
+        message: "Please enter both email and password.",
+        severity: "error",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await login(loginEmail, loginPassword);
+
+      if (remember) {
+        localStorage.setItem("rememberedEmail", loginEmail);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+
+      navigate(location.state?.from || "/rooms", { replace: true });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err?.message || "Unable to log in. Please try again.",
+        severity: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -38,7 +94,6 @@ const Login = () => {
           boxShadow: "0 10px 30px rgba(30, 70, 90, 0.06)",
         }}
       >
-        {/* Welcome Badge */}
         <Box
           sx={{
             display: "inline-flex",
@@ -61,7 +116,6 @@ const Login = () => {
           </Typography>
         </Box>
 
-        {/* Heading */}
         <Typography
           variant="h4"
           sx={{
@@ -80,7 +134,6 @@ const Login = () => {
           Finder
         </Typography>
 
-        {/* Subtitle */}
         <Typography
           sx={{
             fontSize: "15.5px",
@@ -92,135 +145,149 @@ const Login = () => {
           Pick up your Chennai roommate search securely.
         </Typography>
 
-        {/* Email / Mobile */}
-        <Box sx={{ mb: 0.6 }}>
-          <Typography
-            component="label"
-            sx={{
-              display: "block",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#31516D",
-              mb: 0.8,
-            }}
-          >
-            Email or mobile number
-          </Typography>
-
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="medium"
-            type="text"
-            sx={inputStyles}
-          />
-        </Box>
-
-        {/* Password */}
-        <Box sx={{ mb: 1.3 }}>
-          <Typography
-            component="label"
-            sx={{
-              display: "block",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#31516D",
-              mb: 0.8,
-            }}
-          >
-            Password
-          </Typography>
-
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="medium"
-            type="password"
-            sx={inputStyles}
-          />
-        </Box>
-
-        {/* Remember / Forgot */}
         <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mb: 1.8,
+          component="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            performLogin(email, password);
           }}
         >
-          <FormControlLabel
-            control={
-              <Checkbox
-                size="small"
-                sx={{
-                  p: 0.3,
-                  mr: 0.4,
-                  color: "#7A8794",
+          <Box sx={{ mb: 0.6 }}>
+            <Typography
+              component="label"
+              sx={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#31516D",
+                mb: 0.8,
+              }}
+            >
+              Email or mobile number
+            </Typography>
 
-                  "&.Mui-checked": {
-                    color: "#3737E8",
-                  },
-                }}
-              />
-            }
-            label={
-              <Typography
-                sx={{
-                  fontSize: "13.5px",
-                  color: "#243858",
-                }}
-              >
-                Remember me
-              </Typography>
-            }
+            <TextField
+              fullWidth
+              required
+              autoComplete="email"
+              variant="outlined"
+              size="medium"
+              type="text"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              sx={inputStyles}
+            />
+          </Box>
+
+          <Box sx={{ mb: 1.3 }}>
+            <Typography
+              component="label"
+              sx={{
+                display: "block",
+                fontSize: "14px",
+                fontWeight: 700,
+                color: "#31516D",
+                mb: 0.8,
+              }}
+            >
+              Password
+            </Typography>
+
+            <TextField
+              fullWidth
+              required
+              autoComplete="current-password"
+              variant="outlined"
+              size="medium"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              sx={inputStyles}
+            />
+          </Box>
+
+          <Box
             sx={{
-              m: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 1.8,
             }}
-          />
+          >
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                  sx={{
+                    p: 0.3,
+                    mr: 0.4,
+                    color: "#7A8794",
+                    "&.Mui-checked": {
+                      color: "#3730E8",
+                    },
+                  }}
+                />
+              }
+              label={
+                <Typography
+                  sx={{
+                    fontSize: "13.5px",
+                    color: "#243858",
+                  }}
+                >
+                  Remember me
+                </Typography>
+              }
+              sx={{
+                m: 0,
+              }}
+            />
 
-          <Link
-            component={RouterLink}
-            to="/forgot-password"
-            underline="none"
+            <Link
+              component={RouterLink}
+              to="/forgot-password"
+              underline="none"
+              sx={{
+                fontSize: "13px",
+                fontWeight: 700,
+                color: "#4218E8",
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              Forgot password?
+            </Link>
+          </Box>
+
+          <Button
+            fullWidth
+            variant="contained"
+            type="submit"
+            disabled={submitting}
+            startIcon={
+              submitting ? <CircularProgress size={18} color="inherit" /> : null
+            }
             sx={{
-              fontSize: "13px",
+              height: 49,
+              borderRadius: "11px",
+              backgroundColor: "#3730E8",
+              textTransform: "none",
+              fontSize: "15px",
               fontWeight: 700,
-              color: "#4218E8",
-
+              boxShadow: "none",
               "&:hover": {
-                textDecoration: "underline",
+                backgroundColor: "#2F30D1",
+                boxShadow: "none",
               },
             }}
           >
-            Forgot password?
-          </Link>
+            Login
+          </Button>
         </Box>
 
-        {/* Login Button */}
-        <Button
-          fullWidth
-          variant="contained"
-          type="submit"
-          sx={{
-            height: 49,
-            borderRadius: "11px",
-            backgroundColor: "#3737E8",
-            textTransform: "none",
-            fontSize: "15px",
-            fontWeight: 700,
-            boxShadow: "none",
-
-            "&:hover": {
-              backgroundColor: "#2F30D1",
-              boxShadow: "none",
-            },
-          }}
-        >
-          Login
-        </Button>
-
-        {/* Divider */}
         <Divider
           sx={{
             my: 2.3,
@@ -228,10 +295,11 @@ const Login = () => {
           }}
         />
 
-        {/* Demo button */}
         <Button
           fullWidth
           variant="contained"
+          disabled={submitting}
+          onClick={() => performLogin("demo@roommates.local", "demo1234")}
           sx={{
             height: 48,
             borderRadius: "11px",
@@ -241,7 +309,6 @@ const Login = () => {
             fontSize: "14px",
             fontWeight: 700,
             boxShadow: "none",
-
             "&:hover": {
               backgroundColor: "#D8E9FF",
               boxShadow: "none",
@@ -251,7 +318,6 @@ const Login = () => {
           Continue as verified user (demo)
         </Button>
 
-        {/* Register */}
         <Box
           sx={{
             display: "flex",
@@ -273,7 +339,6 @@ const Login = () => {
               sx={{
                 color: "#4218E8",
                 fontWeight: 700,
-
                 "&:hover": {
                   textDecoration: "underline",
                 },
@@ -284,6 +349,22 @@ const Login = () => {
           </Typography>
         </Box>
       </Paper>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4500}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
@@ -293,21 +374,17 @@ const inputStyles = {
     height: 47,
     borderRadius: "11px",
     backgroundColor: "#FFFFFF",
-
     "& fieldset": {
       borderColor: "#BDD3DF",
     },
-
     "&:hover fieldset": {
       borderColor: "#91B3C3",
     },
-
     "&.Mui-focused fieldset": {
-      borderColor: "#3737E8",
+      borderColor: "#3730E8",
       borderWidth: "1.5px",
     },
   },
-
   "& .MuiOutlinedInput-input": {
     fontSize: "14px",
     color: "#172A43",

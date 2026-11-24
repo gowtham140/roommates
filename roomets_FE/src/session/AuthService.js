@@ -1,104 +1,65 @@
-class AuthService {
-  readJwtToken(key) {
-    const appJwtToken = sessionStorage.getItem("TOKEN");
-    if (appJwtToken) {
-      const payload = appJwtToken.split(".")[1];
-      let jwtObj = JSON.parse(atob(payload));
+const TOKEN_KEY = "TOKEN";
+const USER_KEY = "USER";
+const REMEMBER_KEY = "REMEMBER";
 
-      return jwtObj[key];
+const read = (key, storage) => {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const write = (key, value, storage) => {
+  try {
+    if (value === null || value === undefined) {
+      storage.removeItem(key);
     } else {
-      return "";
+      storage.setItem(key, value);
     }
+  } catch {
+    return undefined;
   }
+};
 
-  registerEmail(email) {
-    sessionStorage.setItem("email", email);
-  }
-
-  registerAlertShow() {
-    sessionStorage.setItem("alert", true);
-  }
-
-  registerAuth(loginValue) {
-    // sessionStorage.setItem("authUsers", loginValue.userName);
-    // sessionStorage.setItem("authType", loginValue.uType);
-    // sessionStorage.setItem("authID", loginValue.uId);
-    // sessionStorage.setItem("authMailId", loginValue.mailID);
-    sessionStorage.setItem("loginValue", JSON.stringify(loginValue));
-  }
-
-  getLoginValue() {
-    // let loginValue = sessionStorage.getItem("loginValue");
-    // var obj = JSON.parse(loginValue);
-    return this.readJwtToken("authUsers");
-  }
-
-  getName() {
-    let loginValue = JSON.parse(sessionStorage.getItem("loginValue"));
-    return loginValue.firstName + " " + loginValue.lastName;
-  }
-
-  storeIpAddress(ipAddress) {
-    sessionStorage.setItem("ipAddress", JSON.stringify(ipAddress));
-  }
-
-  registerArea(areaValues) {
-    sessionStorage.setItem("areaValues", JSON.stringify(areaValues));
-  }
-
-  getUserType() {
-    // let type = sessionStorage.getItem("authType");
-    // return type;
-    return this.readJwtToken("userType");
-  }
-
-  getAuthId() {
-    // let type = sessionStorage.getItem("authID");
-    return this.readJwtToken("userId");
-  }
-
-  setNavMenuShow(value) {
-    sessionStorage.setItem("navMenuShow", value);
-  }
-
-  setClientList(value) {
-    const jsonString = JSON.stringify(value);
-    sessionStorage.setItem("clientList", jsonString);
-  }
-
-  getClientList() {
-    const jsonString = sessionStorage.getItem("clientList");
-    return JSON.parse(jsonString);
-  }
-
-  getNavMenuShow() {
-    let value = sessionStorage.getItem("navMenuShow");
-    if (value === "false") {
-      return false;
-    } else {
-      return true;
-    }
-  }
+const AuthService = {
   getToken() {
-    let token = "Bearer " + sessionStorage.getItem("TOKEN");
-    return token;
-  }
+    return read(TOKEN_KEY, sessionStorage) || read(TOKEN_KEY, localStorage);
+  },
 
-  registerToken(token) {
-    sessionStorage.setItem("TOKEN", token);
-  }
+  setToken(token, remember = false) {
+    write(TOKEN_KEY, token, sessionStorage);
+    write(TOKEN_KEY, remember ? token : null, localStorage);
+    write(REMEMBER_KEY, remember ? "true" : "false", localStorage);
+  },
 
-  isAuth() {
-    // let user = sessionStorage.getItem("authUsers");
-    let user = this.readJwtToken("authUsers");
+  getUser() {
+    const rawUser = read(USER_KEY, sessionStorage) || read(USER_KEY, localStorage);
+    if (!rawUser) {
+      return null;
+    }
+    try {
+      return JSON.parse(rawUser);
+    } catch {
+      return null;
+    }
+  },
 
-    if (user) return true;
-    return false;
-  }
+  setUser(user, remember = false) {
+    const value = user ? JSON.stringify(user) : null;
+    write(USER_KEY, value, sessionStorage);
+    write(USER_KEY, remember ? value : null, localStorage);
+  },
+
+  isAuthenticated() {
+    return Boolean(this.getToken());
+  },
 
   removeAuth() {
-    sessionStorage.clear();
-  }
-}
+    [sessionStorage, localStorage].forEach((storage) => {
+      [TOKEN_KEY, USER_KEY, REMEMBER_KEY].forEach((key) => write(key, null, storage));
+    });
+  },
+};
 
-export default new AuthService();
+export default AuthService;
