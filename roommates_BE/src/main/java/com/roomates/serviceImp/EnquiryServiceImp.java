@@ -22,7 +22,7 @@ import com.roomates.webModel.EnquiryResponse;
 public class EnquiryServiceImp implements EnquiryService {
 
     private static final List<String> ACTIVE_STATUSES = List.of("NEW", "CONTACTED");
-    private static final List<String> ALLOWED_STATUSES = List.of("NEW", "CONTACTED", "CLOSED");
+    private static final List<String> ALLOWED_STATUSES = List.of("NEW", "CONTACTED", "CLOSED", "CONFIRMED");
 
     private final EnquiryRepository enquiryRepository;
     private final RoomRepository roomRepository;
@@ -46,6 +46,9 @@ public class EnquiryServiceImp implements EnquiryService {
         User seeker = userRepository.findById(seekerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         requireSeeker(seeker);
+        if (Boolean.TRUE.equals(seeker.getSeekingClosed())) {
+            throw new BadRequestException("Your room seeking is closed. Reopen it from your profile to send enquiries.");
+        }
 
         if (room.getOwner() != null && room.getOwner().getId().equals(seekerId)) {
             throw new BadRequestException("You cannot enquire on your own room");
@@ -102,6 +105,14 @@ public class EnquiryServiceImp implements EnquiryService {
 
         enquiry.setStatus(status);
         enquiryRepository.save(enquiry);
+
+        if ("CONFIRMED".equals(status)) {
+            User seeker = enquiry.getSeeker();
+            if (seeker != null && !Boolean.TRUE.equals(seeker.getSeekingClosed())) {
+                seeker.setSeekingClosed(true);
+                userRepository.save(seeker);
+            }
+        }
     }
 
     private void requireSeeker(User user) {
@@ -131,6 +142,9 @@ public class EnquiryServiceImp implements EnquiryService {
                 seeker == null ? null : seeker.getName(),
                 seeker == null ? null : seeker.getPhone_no(),
                 owner == null ? null : owner.getPhone_no(),
+                seeker == null ? null : seeker.getWorkingDetails(),
+                seeker == null ? null : seeker.getHobbyPreferences(),
+                seeker != null && Boolean.TRUE.equals(seeker.getSeekingClosed()),
                 enquiry.getMessage(),
                 enquiry.getStatus(),
                 enquiry.getCreatedAt());

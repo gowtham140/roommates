@@ -309,6 +309,9 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
         <Info label="Seeker" value={enquiry.seekerName || "—"} />
         <Info label="Seeker phone" value={enquiry.seekerPhone || "—"} />
         <Info label="Owner phone" value={enquiry.ownerPhone || "—"} />
+        {enquiry.seekerWorkingDetails && <Info label="Working" value={enquiry.seekerWorkingDetails} />}
+        {enquiry.seekerHobbyPreferences && <Info label="Hobbies / preferences" value={enquiry.seekerHobbyPreferences} />}
+        {enquiry.seekerSeekingClosed && <Info label="Seeking status" value="Closed" />}
       </Box>
 
       {received && (
@@ -321,6 +324,16 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
               sx={primaryButtonStyles}
             >
               {busy ? <CircularProgress size={17} color="inherit" /> : "Mark as contacted"}
+            </Button>
+          )}
+          {(enquiry.status === "CONTACTED" || enquiry.status === "NEW") && (
+            <Button
+              variant="contained"
+              disabled={busy}
+              onClick={() => onStatus(enquiry, "CONFIRMED")}
+              sx={{ ...primaryButtonStyles, backgroundColor: "#0F9D8A", "&:hover": { backgroundColor: "#0B8676", boxShadow: "none" } }}
+            >
+              {busy ? <CircularProgress size={17} color="inherit" /> : "Confirm & close seeking"}
             </Button>
           )}
           {enquiry.status === "CONTACTED" && (
@@ -358,7 +371,9 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
 const StatusChip = ({ status }) => {
   const normalized = String(status || "NEW").toUpperCase();
   const palette =
-    normalized === "CLOSED"
+    normalized === "CONFIRMED"
+      ? { backgroundColor: "#E4F8F4", color: "#0F766E" }
+      : normalized === "CLOSED"
       ? { backgroundColor: "#EEF1F4", color: "#475467" }
       : normalized === "CONTACTED"
       ? { backgroundColor: "#EEF0FF", color: "#3730E8" }

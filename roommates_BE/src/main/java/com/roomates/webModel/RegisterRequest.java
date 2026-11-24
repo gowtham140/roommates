@@ -28,6 +28,12 @@ public class RegisterRequest {
 
     private Integer age;
 
+    @Size(max = 500)
+    private String workingDetails;
+
+    @Size(max = 500)
+    private String hobbyPreferences;
+
     public String getName() {
         return name;
     }
@@ -82,5 +88,21 @@ public class RegisterRequest {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public String getWorkingDetails() {
+        return workingDetails;
+    }
+
+    public void setWorkingDetails(String workingDetails) {
+        this.workingDetails = workingDetails;
+    }
+
+    public String getHobbyPreferences() {
+        return hobbyPreferences;
+    }
+
+    public void setHobbyPreferences(String hobbyPreferences) {
+        this.hobbyPreferences = hobbyPreferences;
     }
 }

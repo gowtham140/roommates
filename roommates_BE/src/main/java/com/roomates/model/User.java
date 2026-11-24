@@ -52,6 +52,15 @@ public class User {
 	@Column(name = "age")
 	private Integer age;
 
+	@Column(name = "working_details", columnDefinition = "TEXT")
+	private String workingDetails;
+
+	@Column(name = "hobby_preferences", columnDefinition = "TEXT")
+	private String hobbyPreferences;
+
+	@Column(name = "seeking_closed")
+	private Boolean seekingClosed = false;
+
 	@Column(name = "createdDate", updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
 	private Date createdDate;
 
@@ -146,6 +155,30 @@ public class User {
 		this.age = age;
 	}
 
+	public String getWorkingDetails() {
+		return workingDetails;
+	}
+
+	public void setWorkingDetails(String workingDetails) {
+		this.workingDetails = workingDetails;
+	}
+
+	public String getHobbyPreferences() {
+		return hobbyPreferences;
+	}
+
+	public void setHobbyPreferences(String hobbyPreferences) {
+		this.hobbyPreferences = hobbyPreferences;
+	}
+
+	public Boolean getSeekingClosed() {
+		return seekingClosed;
+	}
+
+	public void setSeekingClosed(Boolean seekingClosed) {
+		this.seekingClosed = seekingClosed;
+	}
+
 	public Date getCreatedDate() {
 		return createdDate;
 	}
@@ -166,6 +199,7 @@ public class User {
 	public String toString() {
 		return "User [id=" + id + ", mailID=" + mailID + ", userType=" + userType + ", phone_no=" + phone_no
 				+ ", name=" + name + ", isDelete=" + isDelete + ", status=" + status + ", gender=" + gender
-				+ ", age=" + age + ", createdDate=" + createdDate + ", updatedDate=" + updatedDate + "]";
+				+ ", age=" + age + ", seekingClosed=" + seekingClosed + ", createdDate=" + createdDate
+				+ ", updatedDate=" + updatedDate + "]";
 	}
 }

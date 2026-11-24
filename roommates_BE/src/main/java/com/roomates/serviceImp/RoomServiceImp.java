@@ -42,14 +42,15 @@ public class RoomServiceImp implements RoomService {
     @Override
     @Transactional(readOnly = true)
     public Page<RoomResponse> search(String location, BigDecimal minRent, BigDecimal maxRent, String roomType,
-            String gender, Boolean food, int page, int size, String sort) {
+            String gender, Boolean food, String foodPreference, int page, int size, String sort) {
         String locationQuery = StringUtils.hasText(location) ? location.trim() : null;
         String roomTypeQuery = StringUtils.hasText(roomType) ? roomType.trim() : null;
         String genderQuery = StringUtils.hasText(gender) ? gender.trim() : null;
+        String foodPreferenceQuery = StringUtils.hasText(foodPreference) ? foodPreference.trim() : null;
 
         Pageable pageable = PageRequest.of(page, Math.min(size, 50), resolveSort(sort));
         return roomRepository
-                .search(locationQuery, minRent, maxRent, roomTypeQuery, genderQuery, food, pageable)
+                .search(locationQuery, minRent, maxRent, roomTypeQuery, genderQuery, food, foodPreferenceQuery, pageable)
                 .map(this::toResponse);
     }
 
@@ -140,6 +141,7 @@ public class RoomServiceImp implements RoomService {
         room.setSharing(request.getSharing());
         room.setGender(request.getGender());
         room.setFood(request.getFood());
+        room.setFoodPreference(StringUtils.hasText(request.getFoodPreference()) ? request.getFoodPreference().trim() : null);
         room.setAvailableFrom(request.getAvailableFrom());
         room.setLatitude(request.getLatitude());
         room.setLongitude(request.getLongitude());
@@ -193,6 +195,7 @@ public class RoomServiceImp implements RoomService {
                 room.getSharing(),
                 room.getGender(),
                 room.getFood(),
+                room.getFoodPreference(),
                 room.getAvailableFrom(),
                 amenities,
                 imageUrls,

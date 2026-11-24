@@ -9,6 +9,9 @@ public class UserDto {
     private String gender;
     private Integer age;
     private String userType;
+    private String workingDetails;
+    private String hobbyPreferences;
+    private Boolean seekingClosed;
 
     public UserDto() {
     }
@@ -67,5 +70,29 @@ public class UserDto {
 
     public void setUserType(String userType) {
         this.userType = userType;
+    }
+
+    public String getWorkingDetails() {
+        return workingDetails;
+    }
+
+    public void setWorkingDetails(String workingDetails) {
+        this.workingDetails = workingDetails;
+    }
+
+    public String getHobbyPreferences() {
+        return hobbyPreferences;
+    }
+
+    public void setHobbyPreferences(String hobbyPreferences) {
+        this.hobbyPreferences = hobbyPreferences;
+    }
+
+    public Boolean getSeekingClosed() {
+        return seekingClosed;
+    }
+
+    public void setSeekingClosed(Boolean seekingClosed) {
+        this.seekingClosed = seekingClosed;
     }
 }

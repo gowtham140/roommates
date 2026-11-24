@@ -60,6 +60,9 @@ public class Room {
     @Column(name = "food")
     private Boolean food;
 
+    @Column(name = "food_preference")
+    private String foodPreference;
+
     @Column(name = "available_from")
     private LocalDate availableFrom;
 
@@ -189,6 +192,14 @@ public class Room {
 
     public void setFood(Boolean food) {
         this.food = food;
+    }
+
+    public String getFoodPreference() {
+        return foodPreference;
+    }
+
+    public void setFoodPreference(String foodPreference) {
+        this.foodPreference = foodPreference;
     }
 
     public LocalDate getAvailableFrom() {

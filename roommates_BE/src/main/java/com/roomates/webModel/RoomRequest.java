@@ -28,6 +28,7 @@ public class RoomRequest implements Serializable {
     private String sharing;
     private String gender;
     private Boolean food;
+    private String foodPreference;
     private LocalDate availableFrom;
     private List<String> amenities;
     private List<String> imageUrls;
@@ -108,6 +109,14 @@ public class RoomRequest implements Serializable {
 
     public void setFood(Boolean food) {
         this.food = food;
+    }
+
+    public String getFoodPreference() {
+        return foodPreference;
+    }
+
+    public void setFoodPreference(String foodPreference) {
+        this.foodPreference = foodPreference;
     }
 
     public LocalDate getAvailableFrom() {

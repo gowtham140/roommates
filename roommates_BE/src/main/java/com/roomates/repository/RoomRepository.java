@@ -19,13 +19,15 @@ public interface RoomRepository extends JpaRepository<Room, Integer> {
             + "AND (:maxRent IS NULL OR r.rent <= :maxRent) "
             + "AND (:roomType IS NULL OR r.roomType = :roomType) "
             + "AND (:gender IS NULL OR r.gender = :gender OR r.gender = 'ANY') "
-            + "AND (:food IS NULL OR r.food = :food)")
+            + "AND (:food IS NULL OR r.food = :food) "
+            + "AND (:foodPreference IS NULL OR r.foodPreference = :foodPreference)")
     Page<Room> search(@Param("location") String location,
             @Param("minRent") BigDecimal minRent,
             @Param("maxRent") BigDecimal maxRent,
             @Param("roomType") String roomType,
             @Param("gender") String gender,
             @Param("food") Boolean food,
+            @Param("foodPreference") String foodPreference,
             Pageable pageable);
 
     List<Room> findByOwnerId(Integer ownerId);

@@ -17,6 +17,14 @@ public class ProfileRequest {
 
     private Integer age;
 
+    @Size(max = 500)
+    private String workingDetails;
+
+    @Size(max = 500)
+    private String hobbyPreferences;
+
+    private Boolean seekingClosed;
+
     public String getName() {
         return name;
     }
@@ -47,5 +55,29 @@ public class ProfileRequest {
 
     public void setAge(Integer age) {
         this.age = age;
+    }
+
+    public String getWorkingDetails() {
+        return workingDetails;
+    }
+
+    public void setWorkingDetails(String workingDetails) {
+        this.workingDetails = workingDetails;
+    }
+
+    public String getHobbyPreferences() {
+        return hobbyPreferences;
+    }
+
+    public void setHobbyPreferences(String hobbyPreferences) {
+        this.hobbyPreferences = hobbyPreferences;
+    }
+
+    public Boolean getSeekingClosed() {
+        return seekingClosed;
+    }
+
+    public void setSeekingClosed(Boolean seekingClosed) {
+        this.seekingClosed = seekingClosed;
     }
 }

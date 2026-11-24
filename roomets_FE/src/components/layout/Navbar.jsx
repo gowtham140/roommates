@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AppBar,
   Avatar,
@@ -10,9 +10,10 @@ import {
   Drawer,
   IconButton,
   List,
-  ListItem,
   ListItemButton,
+  ListItemIcon,
   ListItemText,
+  ListSubheader,
   Menu,
   MenuItem,
   Stack,
@@ -20,324 +21,249 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  AdminPanelSettingsOutlined,
-  HomeOutlined,
-  LocationOnOutlined,
-  Menu as MenuIcon,
   AddHomeWorkOutlined,
+  AdminPanelSettingsOutlined,
+  FavoriteBorderRounded,
+  HomeOutlined,
+  InfoOutlined,
+  LocationOnOutlined,
+  LogoutRounded,
+  MailOutlineRounded,
+  Menu as MenuIcon,
+  PersonOutlineRounded,
   SearchRounded,
+  ShieldOutlined,
+  SpaceDashboardOutlined,
 } from "@mui/icons-material";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { canManageRooms, isAdmin, isSeeker } from "../../utils/userTypes";
 
-const navItems = [
-  { label: "Home", path: "/" },
-  { label: "Find Rooms", path: "/rooms" },
-  { label: "How It Works", path: "/how-it-works" },
-  { label: "Safety", path: "/safety" },
+const primaryItems = [
+  { label: "Home", path: "/", icon: <HomeOutlined fontSize="small" /> },
+  { label: "Find Rooms", path: "/rooms", icon: <SearchRounded fontSize="small" /> },
+  { label: "How It Works", path: "/how-it-works", icon: <InfoOutlined fontSize="small" /> },
+  { label: "Safety", path: "/safety", icon: <ShieldOutlined fontSize="small" /> },
 ];
 
-const linkStyle = {
+const navButtonSx = {
   textTransform: "none",
-  fontSize: "15px",
+  fontSize: "14px",
   fontWeight: 600,
   color: "#43516A",
   borderRadius: "10px",
-  px: 1.6,
-  py: 1,
+  px: 1.4,
+  py: 0.9,
+  whiteSpace: "nowrap",
   "&.active": { backgroundColor: "#EEF4FF", color: "#304A73" },
   "&:hover": { backgroundColor: "#F5F7FA" },
 };
+
+const drawerItemSx = (active) => ({
+  borderRadius: "10px",
+  mb: 0.25,
+  color: active ? "#304A73" : "#344054",
+  backgroundColor: active ? "#EEF4FF" : "transparent",
+  "& .MuiListItemIcon-root": { color: active ? "#3730E8" : "#667085", minWidth: 36 },
+  "&:hover": { backgroundColor: active ? "#EEF4FF" : "#F5F7FA" },
+});
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const admin = isAdmin(user);
   const owner = canManageRooms(user);
   const seeker = isSeeker(user);
+  const seekingClosed = Boolean(user?.seekingClosed);
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState(null);
+  const location = useLocation();
+  const [accountAnchor, setAccountAnchor] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const visiblePrimaryItems = useMemo(
+    () => (seekingClosed ? primaryItems.filter((item) => item.path !== "/rooms") : primaryItems),
+    [seekingClosed]
+  );
+
+  const accountItems = useMemo(() => {
+    const items = [{ label: "My Profile", path: "/profile", icon: <PersonOutlineRounded fontSize="small" /> }];
+    if (owner) {
+      items.push(
+        { label: "My Rooms", path: "/my-rooms", icon: <SpaceDashboardOutlined fontSize="small" /> },
+        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> },
+        { label: "Post a Room", path: "/post-room", icon: <AddHomeWorkOutlined fontSize="small" /> }
+      );
+    }
+    if (seeker) {
+      items.push(
+        { label: "My Applications", path: "/my-applications", icon: <MailOutlineRounded fontSize="small" /> },
+        { label: "Liked Rooms", path: "/liked-rooms", icon: <FavoriteBorderRounded fontSize="small" /> },
+        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> }
+      );
+    }
+    if (admin) items.push({ label: "Admin Dashboard", path: "/admin", icon: <AdminPanelSettingsOutlined fontSize="small" /> });
+    return items.filter((item, index, arr) => arr.findIndex((i) => i.path === item.path) === index);
+  }, [admin, owner, seeker]);
+
+  const closeMenus = () => {
+    setAccountAnchor(null);
+    setDrawerOpen(false);
+  };
+
   const handleLogout = () => {
-    setAnchorEl(null);
+    closeMenus();
     logout();
     navigate("/");
   };
 
-  const accountItems = [
-    { label: "My Profile", path: "/profile" },
-    ...(owner
-      ? [
-          { label: "My Rooms", path: "/my-rooms" },
-          { label: "My Enquiries", path: "/enquiries" },
-          { label: "Post a Room", path: "/post-room" },
-        ]
-      : []),
-    ...(seeker
-      ? [
-          { label: "My Applications", path: "/my-applications" },
-          { label: "Liked Rooms", path: "/liked-rooms" },
-          { label: "My Enquiries", path: "/enquiries" },
-        ]
-      : []),
-    ...(admin ? [{ label: "Admin Dashboard", path: "/admin" }] : []),
-  ];
+  const goTo = (path) => {
+    closeMenus();
+    navigate(path);
+  };
+
+  const isActive = (path) => (path === "/" ? location.pathname === "/" : location.pathname.startsWith(path));
 
   return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{ backgroundColor: "#ffffff", color: "#17233C", borderBottom: "1px solid #E8ECF2" }}
-    >
+    <AppBar position="sticky" elevation={0} sx={{ backgroundColor: "#ffffff", color: "#17233C", borderBottom: "1px solid #E8ECF2" }}>
       <Container maxWidth="xl">
-        <Toolbar
-          disableGutters
-          sx={{ minHeight: "64px", display: "flex", justifyContent: "space-between", gap: 1 }}
-        >
-          <Box
-            component={NavLink}
-            to="/"
-            sx={{ display: "flex", alignItems: "center", gap: 1.2, textDecoration: "none", color: "inherit" }}
-          >
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: "11px",
-                backgroundColor: "#3730E8",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+        <Toolbar disableGutters sx={{ minHeight: "64px", display: "flex", justifyContent: "space-between", gap: 1.5 }}>
+          <Box component={NavLink} to="/" sx={{ display: "flex", alignItems: "center", gap: 1.2, textDecoration: "none", color: "inherit", flexShrink: 0 }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: "11px", backgroundColor: "#3730E8", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <HomeOutlined sx={{ color: "#ffffff", fontSize: 21 }} />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: "16px", fontWeight: 700, lineHeight: 1.1 }}>
-                RoomMate Finder
-              </Typography>
-              <Typography sx={{ fontSize: "9px", color: "#667085", mt: 0.3 }}>
-                Direct. Verified. Chennai.
-              </Typography>
+              <Typography sx={{ fontSize: "16px", fontWeight: 700, lineHeight: 1.1 }}>RoomMate Finder</Typography>
+              <Typography sx={{ fontSize: "9px", color: "#667085", mt: 0.3 }}>Direct. Verified. Chennai.</Typography>
             </Box>
           </Box>
 
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{ alignItems: "center", display: { xs: "none", md: "flex" }, ml: "auto", mr: 2 }}
-          >
-            {navItems.map((item) => (
-              <Button
-                key={item.path}
-                component={NavLink}
-                to={item.path}
-                end={item.path === "/"}
-                sx={linkStyle}
-              >
+          <Stack direction="row" spacing={0.25} sx={{ alignItems: "center", display: { xs: "none", lg: "flex" }, ml: "auto", mr: 1 }}>
+            {visiblePrimaryItems.map((item) => (
+              <Button key={item.path} component={NavLink} to={item.path} end={item.path === "/"} sx={navButtonSx}>
                 {item.label}
               </Button>
             ))}
-            {admin && (
-              <Button
-                component={NavLink}
-                to="/admin"
-                startIcon={<AdminPanelSettingsOutlined sx={{ fontSize: "18px !important" }} />}
-                sx={{
-                  ...linkStyle,
-                  ml: 0.5,
-                  backgroundColor: "#EEE9FF",
-                  color: "#5B3DD9",
-                  "&.active": { backgroundColor: "#DDD4FF", color: "#4A2FC0" },
-                  "&:hover": { backgroundColor: "#E4DCFF" },
-                }}
-              >
-                Admin
-              </Button>
-            )}
           </Stack>
 
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: "none", sm: "flex" } }}>
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
             <Chip
               icon={<LocationOnOutlined sx={{ fontSize: "16px !important" }} />}
               label="Chennai"
               size="small"
-              sx={{
-                backgroundColor: "#EFFAF7",
-                color: "#008A78",
-                fontWeight: 600,
-                borderRadius: "18px",
-                px: 0.5,
-              }}
+              sx={{ display: { xs: "none", sm: "inline-flex" }, backgroundColor: "#EFFAF7", color: "#008A78", fontWeight: 600, borderRadius: "18px" }}
             />
 
             {user ? (
               <>
-                {owner ? (
+                {!seekingClosed && (
                   <Button
                     component={NavLink}
-                    to="/post-room"
+                    to={owner ? "/post-room" : "/rooms"}
                     variant="contained"
-                    startIcon={<AddHomeWorkOutlined />}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      backgroundColor: "#3730E8",
-                      borderRadius: "11px",
-                      px: 2,
-                      boxShadow: "none",
-                      "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
-                    }}
+                    startIcon={owner ? <AddHomeWorkOutlined /> : <SearchRounded />}
+                    sx={{ display: { xs: "none", md: "inline-flex" }, textTransform: "none", fontWeight: 600, backgroundColor: "#3730E8", borderRadius: "11px", px: 2, boxShadow: "none", "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" } }}
                   >
-                    Post a room
-                  </Button>
-                ) : (
-                  <Button
-                    component={NavLink}
-                    to="/rooms"
-                    variant="contained"
-                    startIcon={<SearchRounded />}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      backgroundColor: "#3730E8",
-                      borderRadius: "11px",
-                      px: 2,
-                      boxShadow: "none",
-                      "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
-                    }}
-                  >
-                    Find rooms
+                    {owner ? "Post a room" : "Find rooms"}
                   </Button>
                 )}
-                <IconButton onClick={(event) => setAnchorEl(event.currentTarget)} aria-label="Account menu">
-                  <Avatar sx={{ bgcolor: "#0F9D8A", width: 34, height: 34, fontSize: 14 }}>
+                <Button
+                  onClick={(e) => setAccountAnchor(e.currentTarget)}
+                  aria-label="Open account menu"
+                  sx={{ display: { xs: "none", md: "inline-flex" }, textTransform: "none", color: "#17233C", border: "1px solid #D7DFEA", borderRadius: "11px", px: 1, py: 0.5, minWidth: 0 }}
+                >
+                  <Avatar sx={{ bgcolor: "#0F9D8A", width: 30, height: 30, fontSize: 13, mr: 1 }}>
                     {(user.name || "U").charAt(0).toUpperCase()}
                   </Avatar>
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={() => setAnchorEl(null)}
-                >
-                  <MenuItem disabled sx={{ opacity: 1 }}>
-                    <Box>
-                      <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{user.name}</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#667085" }}>{user.email}</Typography>
-                    </Box>
-                  </MenuItem>
+                  <Box sx={{ textAlign: "left", mr: 0.5, maxWidth: 140 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }} noWrap>{user.name || "Account"}</Typography>
+                    <Typography sx={{ fontSize: 11, color: "#667085", lineHeight: 1.2 }} noWrap>{owner ? "Owner" : seeker ? "Seeker" : "Account"}</Typography>
+                  </Box>
+                </Button>
+                <Menu anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)} PaperProps={{ sx: { mt: 1, borderRadius: "14px", minWidth: 240, border: "1px solid #E8ECF2" } }}>
+                  <Box sx={{ px: 2, py: 1.25 }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{user.name}</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#667085" }} noWrap>{user.email}</Typography>
+                  </Box>
                   <Divider />
                   {accountItems.map((item) => (
-                    <MenuItem
-                      key={item.path}
-                      component={NavLink}
-                      to={item.path}
-                      onClick={() => setAnchorEl(null)}
-                      sx={{ fontSize: 14 }}
-                    >
+                    <MenuItem key={item.path} onClick={() => goTo(item.path)} selected={isActive(item.path)} sx={{ fontSize: 14, gap: 1.25, py: 1 }}>
+                      <Box sx={{ color: "#667085", display: "flex" }}>{item.icon}</Box>
                       {item.label}
                     </MenuItem>
                   ))}
                   <Divider />
-                  <MenuItem onClick={handleLogout} sx={{ fontSize: 14, color: "#B42318" }}>
-                    Logout
+                  <MenuItem onClick={handleLogout} sx={{ fontSize: 14, color: "#B42318", gap: 1.25, py: 1 }}>
+                    <LogoutRounded fontSize="small" /> Logout
                   </MenuItem>
                 </Menu>
               </>
             ) : (
-              <>
-                <Button
-                  component={NavLink}
-                  to="/login"
-                  variant="outlined"
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    color: "#17233C",
-                    borderColor: "#C9D2E1",
-                    borderRadius: "11px",
-                    px: 2,
-                    "&:hover": { borderColor: "#3730E8", backgroundColor: "#F8F9FF" },
-                  }}
-                >
+              <Stack direction="row" spacing={1} sx={{ display: { xs: "none", md: "flex" } }}>
+                <Button component={NavLink} to="/login" variant="outlined" sx={{ textTransform: "none", fontWeight: 600, color: "#17233C", borderColor: "#C9D2E1", borderRadius: "11px", px: 2 }}>
                   Login
                 </Button>
-                <Button
-                  component={NavLink}
-                  to="/register"
-                  variant="contained"
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    backgroundColor: "#3730E8",
-                    borderRadius: "11px",
-                    px: 2,
-                    boxShadow: "none",
-                    "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" },
-                  }}
-                >
+                <Button component={NavLink} to="/register" variant="contained" sx={{ textTransform: "none", fontWeight: 600, backgroundColor: "#3730E8", borderRadius: "11px", px: 2, boxShadow: "none", "&:hover": { backgroundColor: "#2E27C9", boxShadow: "none" } }}>
                   Sign Up
                 </Button>
-              </>
+              </Stack>
             )}
-          </Stack>
 
-          <IconButton
-            sx={{ display: { xs: "flex", sm: "none" }, ml: "auto" }}
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open navigation"
-          >
-            <MenuIcon />
-          </IconButton>
+            <IconButton sx={{ display: { xs: "flex", lg: "none" } }} onClick={() => setDrawerOpen(true)} aria-label="Open navigation menu">
+              <MenuIcon />
+            </IconButton>
+          </Stack>
         </Toolbar>
       </Container>
 
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box sx={{ width: 260, p: 2 }} role="presentation">
-          <List>
-            {navItems.map((item) => (
-              <ListItem key={item.path} disablePadding>
-                <ListItemButton
-                  component={NavLink}
-                  to={item.path}
-                  end={item.path === "/"}
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  <ListItemText primary={item.label} />
-                </ListItemButton>
-              </ListItem>
+        <Box sx={{ width: { xs: 300, sm: 340 }, p: 2 }} role="presentation">
+          {user && (
+            <Box sx={{ p: 1.5, mb: 1.5, borderRadius: "14px", backgroundColor: "#F7FAFC", border: "1px solid #E6EDF3" }}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Avatar sx={{ bgcolor: "#0F9D8A", width: 40, height: 40 }}>{(user.name || "U").charAt(0).toUpperCase()}</Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 700, fontSize: 14 }} noWrap>{user.name}</Typography>
+                  <Typography sx={{ fontSize: 12, color: "#667085" }} noWrap>{user.email}</Typography>
+                </Box>
+              </Stack>
+            </Box>
+          )}
+
+          <List subheader={<ListSubheader sx={{ bgcolor: "transparent", px: 1, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#667085", lineHeight: 2.5 }}>EXPLORE</ListSubheader>}>
+            {visiblePrimaryItems.map((item) => (
+              <ListItemButton key={item.path} onClick={() => goTo(item.path)} sx={drawerItemSx(isActive(item.path))}>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
             ))}
-            <Divider sx={{ my: 1 }} />
-            {user ? (
-              [...accountItems, { label: "Logout", path: null }].map((item) => (
-                <ListItem key={item.label} disablePadding>
-                  <ListItemButton
-                    onClick={() => {
-                      setDrawerOpen(false);
-                      if (item.path) navigate(item.path);
-                      else handleLogout();
-                    }}
-                  >
-                    <ListItemText primary={item.label} />
-                  </ListItemButton>
-                </ListItem>
-              ))
-            ) : (
-              ["Login", "Register"].map((label) => (
-                <ListItem key={label} disablePadding>
-                  <ListItemButton
-                    onClick={() => {
-                      setDrawerOpen(false);
-                      navigate(label === "Login" ? "/login" : "/register");
-                    }}
-                  >
-                    <ListItemText primary={label} />
-                  </ListItemButton>
-                </ListItem>
-              ))
-            )}
           </List>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          {user ? (
+            <List subheader={<ListSubheader sx={{ bgcolor: "transparent", px: 1, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#667085", lineHeight: 2.5 }}>MY ACCOUNT</ListSubheader>}>
+              {accountItems.map((item) => (
+                <ListItemButton key={item.path} onClick={() => goTo(item.path)} sx={drawerItemSx(isActive(item.path))}>
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+                </ListItemButton>
+              ))}
+              <ListItemButton onClick={handleLogout} sx={{ borderRadius: "10px", mt: 0.5, color: "#B42318", "& .MuiListItemIcon-root": { color: "#B42318", minWidth: 36 } }}>
+                <ListItemIcon><LogoutRounded fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
+            </List>
+          ) : (
+            <List subheader={<ListSubheader sx={{ bgcolor: "transparent", px: 1, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#667085", lineHeight: 2.5 }}>ACCOUNT</ListSubheader>}>
+              <ListItemButton onClick={() => goTo("/login")} sx={drawerItemSx(isActive("/login"))}>
+                <ListItemIcon><PersonOutlineRounded fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Login" primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
+              <ListItemButton onClick={() => goTo("/register")} sx={drawerItemSx(isActive("/register"))}>
+                <ListItemIcon><AddHomeWorkOutlined fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Sign Up" primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
+            </List>
+          )}
         </Box>
       </Drawer>
     </AppBar>

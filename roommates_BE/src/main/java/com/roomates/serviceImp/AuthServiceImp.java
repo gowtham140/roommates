@@ -65,6 +65,9 @@ public class AuthServiceImp implements AuthService {
         user.setCpassword(request.getPassword());
         user.setGender(request.getGender());
         user.setAge(request.getAge());
+        user.setWorkingDetails(trimToNull(request.getWorkingDetails()));
+        user.setHobbyPreferences(trimToNull(request.getHobbyPreferences()));
+        user.setSeekingClosed(false);
         user.setUserType(userType);
         user.setStatus(true);
         user.setIsDelete(false);
@@ -110,6 +113,11 @@ public class AuthServiceImp implements AuthService {
         user.setPhone_no(request.getPhone().trim());
         user.setGender(request.getGender());
         user.setAge(request.getAge());
+        user.setWorkingDetails(trimToNull(request.getWorkingDetails()));
+        user.setHobbyPreferences(trimToNull(request.getHobbyPreferences()));
+        if (request.getSeekingClosed() != null) {
+            user.setSeekingClosed(request.getSeekingClosed());
+        }
         user.setUpdatedDate(new Date());
         return toDto(userRepository.save(user));
     }
@@ -123,6 +131,14 @@ public class AuthServiceImp implements AuthService {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private UserDto toDto(User user) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
@@ -132,6 +148,9 @@ public class AuthServiceImp implements AuthService {
         dto.setGender(user.getGender());
         dto.setAge(user.getAge());
         dto.setUserType(user.getUserType());
+        dto.setWorkingDetails(user.getWorkingDetails());
+        dto.setHobbyPreferences(user.getHobbyPreferences());
+        dto.setSeekingClosed(Boolean.TRUE.equals(user.getSeekingClosed()));
         return dto;
     }
 }

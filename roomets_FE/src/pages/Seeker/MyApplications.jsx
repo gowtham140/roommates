@@ -29,6 +29,9 @@ const formatDate = (value) => {
 
 const statusPalette = (status) => {
   const normalized = String(status || "NEW").toUpperCase();
+  if (normalized === "CONFIRMED") {
+    return { backgroundColor: "#E4F8F4", color: "#0F766E" };
+  }
   if (normalized === "CLOSED") {
     return { backgroundColor: "#EEF1F4", color: "#475467" };
   }

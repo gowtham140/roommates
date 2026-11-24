@@ -46,6 +46,7 @@ const FOOD_OPTIONS = [
   { value: "true", label: "Food provided" },
   { value: "false", label: "No food" },
 ];
+const FOOD_PREFERENCES = ["Vegetarian", "Non-Vegetarian", "Both"];
 
 const FindRooms = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const FindRooms = () => {
       roomType: searchParams.get("roomType") || "",
       gender: searchParams.get("gender") || "",
       food: searchParams.get("food") || "",
+      foodPreference: searchParams.get("foodPreference") || "",
     }),
     [searchParams]
   );
@@ -79,7 +81,8 @@ const FindRooms = () => {
   });
 
   useEffect(() => {
-    setSavedRooms(getSavedRoomIds(user?.id));
+    const userId = user?.id;
+    queueMicrotask(() => setSavedRooms(getSavedRoomIds(userId)));
   }, [user?.id]);
 
   const loadRooms = useCallback(() => {
@@ -276,13 +279,23 @@ const FindRooms = () => {
               />
             </Grid>
 
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
               <FieldLabel label="Food" />
               <FilterSelect
                 value={filters.food}
                 onChange={(value) => updateFilter("food", value)}
                 options={FOOD_OPTIONS}
                 placeholder="Any food"
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+              <FieldLabel label="Food preference" />
+              <FilterSelect
+                value={filters.foodPreference}
+                onChange={(value) => updateFilter("foodPreference", value)}
+                options={FOOD_PREFERENCES.map((option) => ({ value: option, label: option }))}
+                placeholder="Any preference"
               />
             </Grid>
 
@@ -629,7 +642,13 @@ const RoomCard = ({ room, userPosition, saved, onSave, onView }) => {
           <InfoChip label={room.roomType || "Room"} />
           <InfoChip label={room.sharing || "Shared"} />
           <InfoChip label={room.gender || "ANY"} />
-          <InfoChip label={room.food ? "Food provided" : "No food"} />
+          <InfoChip
+            label={
+              room.food
+                ? `Food: ${room.foodPreference || "Provided"}`
+                : "No food"
+            }
+          />
         </Box>
 
         {amenities.length > 0 && (

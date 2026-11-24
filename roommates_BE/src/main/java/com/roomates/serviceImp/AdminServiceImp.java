@@ -141,6 +141,7 @@ public class AdminServiceImp implements AdminService {
                 room.getSharing(),
                 room.getGender(),
                 room.getFood(),
+                room.getFoodPreference(),
                 room.getAvailableFrom(),
                 amenities,
                 imageUrls,

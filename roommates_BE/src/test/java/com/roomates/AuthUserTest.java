@@ -29,7 +29,10 @@ class AuthUserTest {
         assertTrue(details.isCredentialsNonExpired());
         assertTrue(details.isAccountNonLocked());
         assertEquals(7, details.getUserId());
-        assertEquals("ROLE_USER", details.getAuthorities().iterator().next().getAuthority());
+        assertTrue(details.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_USER".equals(authority.getAuthority())));
+        assertTrue(details.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_OWNER".equals(authority.getAuthority())));
     }
 
     @Test

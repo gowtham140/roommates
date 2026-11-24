@@ -9,11 +9,13 @@ import {
   CircularProgress,
   Container,
   FormControl,
+  FormControlLabel,
   Grid,
   MenuItem,
   Paper,
   Select,
   Snackbar,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -194,6 +196,12 @@ const Profile = () => {
                     label="Age"
                     value={displayed.age != null ? displayed.age : "Not added"}
                   />
+                  <DetailRow label="Working details" value={displayed.workingDetails || "Not added"} />
+                  <DetailRow label="Hobby / preferences" value={displayed.hobbyPreferences || "Not added"} />
+                  <DetailRow
+                    label="Room seeking"
+                    value={displayed.seekingClosed ? "Closed" : "Open"}
+                  />
                 </Box>
 
                 {fetching && (
@@ -226,7 +234,7 @@ const Profile = () => {
                   Edit profile
                 </Typography>
                 <Typography sx={{ fontSize: "14px", color: "#667085", mb: 3 }}>
-                  Only your name, phone, gender and age can be changed.
+                  Update your details. Seekers can also add working details, hobbies, and close room seeking when done.
                 </Typography>
 
                 <ProfileForm
@@ -295,6 +303,9 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
     phone: profile.phone || "",
     gender: profile.gender || "",
     age: profile.age != null ? String(profile.age) : "",
+    workingDetails: profile.workingDetails || "",
+    hobbyPreferences: profile.hobbyPreferences || "",
+    seekingClosed: Boolean(profile.seekingClosed),
   });
   const [saving, setSaving] = useState(false);
 
@@ -319,6 +330,9 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         phone: form.phone.trim(),
         gender: form.gender,
         age: form.age === "" ? null : Number(form.age),
+        workingDetails: form.workingDetails.trim(),
+        hobbyPreferences: form.hobbyPreferences.trim(),
+        seekingClosed: form.seekingClosed,
       });
 
       if (typeof updateUser === "function") {
@@ -386,6 +400,50 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
             value={form.age}
             onChange={handleChange}
             sx={fieldStyles}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Typography sx={labelStyles}>Working details</Typography>
+          <TextField
+            fullWidth
+            name="workingDetails"
+            value={form.workingDetails}
+            onChange={handleChange}
+            placeholder="e.g. Software engineer at TCS"
+            sx={fieldStyles}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Typography sx={labelStyles}>Hobby / preferences</Typography>
+          <TextField
+            fullWidth
+            name="hobbyPreferences"
+            value={form.hobbyPreferences}
+            onChange={handleChange}
+            placeholder="e.g. Reading, early riser"
+            sx={fieldStyles}
+          />
+        </Grid>
+
+        <Grid size={12}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={form.seekingClosed}
+                onChange={(e) => setForm((prev) => ({ ...prev, seekingClosed: e.target.checked }))}
+                color="primary"
+              />
+            }
+            label={
+              <Box>
+                <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#17233C" }}>Close room seeking</Typography>
+                <Typography sx={{ fontSize: 12, color: "#667085" }}>
+                  When closed, Find Rooms is hidden and you cannot send new enquiries.
+                </Typography>
+              </Box>
+            }
           />
         </Grid>
 

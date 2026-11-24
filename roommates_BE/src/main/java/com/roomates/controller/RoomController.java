@@ -42,12 +42,13 @@ public class RoomController {
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) Boolean food,
+            @RequestParam(required = false) String foodPreference,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         return ResponseEntity.ok(ApiResponse.ok(
-                roomService.search(location, minRent, maxRent, roomType, gender, food, page, size, sort)));
+                roomService.search(location, minRent, maxRent, roomType, gender, food, foodPreference, page, size, sort)));
     }
 
     @GetMapping("/mine")

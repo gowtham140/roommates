@@ -45,14 +45,14 @@ class RoomServiceImpTest {
 
     @Test
     void searchMapsResponseAndResolvesSort() {
-        when(roomRepository.search(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+        when(roomRepository.search(any(), any(), any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(java.util.List.of()));
 
-        service.search("adyar", new BigDecimal("10000"), new BigDecimal("30000"), "1BHK", "ANY", true, 1, 10,
+        service.search("adyar", new BigDecimal("10000"), new BigDecimal("30000"), "1BHK", "ANY", true, "VEG", 1, 10,
                 "rent,asc");
 
         ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-        verify(roomRepository).search(any(), any(), any(), any(), any(), any(), captor.capture());
+        verify(roomRepository).search(any(), any(), any(), any(), any(), any(), any(), captor.capture());
         assertEquals(1, captor.getValue().getPageNumber());
         assertEquals(10, captor.getValue().getPageSize());
         assertEquals("rent: ASC", captor.getValue().getSort().toString());

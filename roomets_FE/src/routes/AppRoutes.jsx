@@ -17,6 +17,8 @@ import RoomDetail from "../pages/Home/RoomDetail";
 import PostRoom from "../pages/Home/PostRoom";
 import MyRooms from "../pages/Home/MyRooms";
 import MyEnquiries from "../pages/Enquiries/MyEnquiries";
+import MyApplications from "../pages/Seeker/MyApplications";
+import LikedRooms from "../pages/Seeker/LikedRooms";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 
 const Page = ({ title, subtitle }) => (
@@ -55,6 +57,8 @@ const AppRoutes = () => (
         <Route path="post-room" element={<PostRoom />} />
         <Route path="my-rooms" element={<MyRooms />} />
         <Route path="enquiries" element={<MyEnquiries />} />
+        <Route path="my-applications" element={<MyApplications />} />
+        <Route path="liked-rooms" element={<LikedRooms />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 

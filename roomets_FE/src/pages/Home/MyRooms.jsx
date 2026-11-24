@@ -75,6 +75,7 @@ const MyRooms = () => {
       sharing: room.sharing,
       gender: room.gender,
       food: room.food,
+      foodPreference: room.foodPreference,
       availableFrom: room.availableFrom,
       amenities: Array.isArray(room.amenities) ? room.amenities : [],
       imageUrls: Array.isArray(room.imageUrls) ? room.imageUrls : [],

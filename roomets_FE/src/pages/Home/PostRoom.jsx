@@ -42,6 +42,7 @@ const AMENITIES = [
 const ROOM_TYPES = ["1RK", "1BHK", "2BHK", "3BHK"];
 const SHARING_OPTIONS = ["Single", "Double", "Triple"];
 const GENDERS = ["ANY", "MALE", "FEMALE"];
+const FOOD_PREFERENCES = ["Vegetarian", "Non-Vegetarian", "Both"];
 
 const roomSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters"),
@@ -59,6 +60,7 @@ const roomSchema = z.object({
   sharing: z.string().min(1, "Choose a sharing type"),
   gender: z.string().min(1, "Choose a gender preference"),
   food: z.boolean(),
+  foodPreference: z.string(),
   availableFrom: z.string().min(1, "Choose an availability date"),
   amenities: z.array(z.string()),
 });
@@ -73,6 +75,7 @@ const defaultValues = {
   sharing: "",
   gender: "ANY",
   food: false,
+  foodPreference: "",
   availableFrom: "",
   amenities: [],
 };
@@ -140,6 +143,7 @@ const PostRoom = () => {
           sharing: data.sharing || "",
           gender: data.gender || "ANY",
           food: Boolean(data.food),
+          foodPreference: data.foodPreference || "",
           availableFrom: data.availableFrom || "",
           amenities: Array.isArray(data.amenities) ? data.amenities : [],
         });
@@ -193,6 +197,7 @@ const PostRoom = () => {
         sharing: values.sharing,
         gender: values.gender,
         food: values.food,
+        foodPreference: values.food ? values.foodPreference : "",
         availableFrom: values.availableFrom,
         amenities: values.amenities,
         imageUrls,
@@ -449,7 +454,7 @@ const PostRoom = () => {
                 />
               </Grid>
 
-              <Grid size={12}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Controller
                   name="food"
                   control={control}
@@ -468,6 +473,30 @@ const PostRoom = () => {
                         </Typography>
                       }
                     />
+                  )}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FieldLabel label="Food preference" />
+                <Controller
+                  name="foodPreference"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      select
+                      fullWidth
+                      {...field}
+                      SelectProps={{ displayEmpty: true }}
+                      sx={fieldStyles}
+                    >
+                      <MenuItem value="">Any food preference</MenuItem>
+                      {FOOD_PREFERENCES.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
                   )}
                 />
               </Grid>

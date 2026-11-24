@@ -14,6 +14,9 @@ public class EnquiryResponse implements Serializable {
     private String seekerName;
     private String seekerPhone;
     private String ownerPhone;
+    private String seekerWorkingDetails;
+    private String seekerHobbyPreferences;
+    private Boolean seekerSeekingClosed;
     private String message;
     private String status;
     private LocalDateTime createdAt;
@@ -22,7 +25,8 @@ public class EnquiryResponse implements Serializable {
     }
 
     public EnquiryResponse(Integer id, Integer roomId, String roomTitle, Integer seekerId, String seekerName,
-            String seekerPhone, String ownerPhone, String message, String status, LocalDateTime createdAt) {
+            String seekerPhone, String ownerPhone, String seekerWorkingDetails, String seekerHobbyPreferences,
+            Boolean seekerSeekingClosed, String message, String status, LocalDateTime createdAt) {
         this.id = id;
         this.roomId = roomId;
         this.roomTitle = roomTitle;
@@ -30,6 +34,9 @@ public class EnquiryResponse implements Serializable {
         this.seekerName = seekerName;
         this.seekerPhone = seekerPhone;
         this.ownerPhone = ownerPhone;
+        this.seekerWorkingDetails = seekerWorkingDetails;
+        this.seekerHobbyPreferences = seekerHobbyPreferences;
+        this.seekerSeekingClosed = seekerSeekingClosed;
         this.message = message;
         this.status = status;
         this.createdAt = createdAt;
@@ -89,6 +96,30 @@ public class EnquiryResponse implements Serializable {
 
     public void setOwnerPhone(String ownerPhone) {
         this.ownerPhone = ownerPhone;
+    }
+
+    public String getSeekerWorkingDetails() {
+        return seekerWorkingDetails;
+    }
+
+    public void setSeekerWorkingDetails(String seekerWorkingDetails) {
+        this.seekerWorkingDetails = seekerWorkingDetails;
+    }
+
+    public String getSeekerHobbyPreferences() {
+        return seekerHobbyPreferences;
+    }
+
+    public void setSeekerHobbyPreferences(String seekerHobbyPreferences) {
+        this.seekerHobbyPreferences = seekerHobbyPreferences;
+    }
+
+    public Boolean getSeekerSeekingClosed() {
+        return seekerSeekingClosed;
+    }
+
+    public void setSeekerSeekingClosed(Boolean seekerSeekingClosed) {
+        this.seekerSeekingClosed = seekerSeekingClosed;
     }
 
     public String getMessage() {

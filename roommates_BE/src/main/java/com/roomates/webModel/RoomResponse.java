@@ -22,6 +22,7 @@ public class RoomResponse implements Serializable {
     private String sharing;
     private String gender;
     private Boolean food;
+    private String foodPreference;
     private LocalDate availableFrom;
     private List<String> amenities;
     private List<String> imageUrls;
@@ -35,7 +36,7 @@ public class RoomResponse implements Serializable {
 
     public RoomResponse(Integer id, Integer ownerId, String ownerName, String title, String description,
             String location, BigDecimal rent, BigDecimal deposit, String roomType, String sharing, String gender,
-            Boolean food, LocalDate availableFrom, List<String> amenities, List<String> imageUrls, String status,
+            Boolean food, String foodPreference, LocalDate availableFrom, List<String> amenities, List<String> imageUrls, String status,
             Double latitude, Double longitude, LocalDateTime createdAt) {
         this.id = id;
         this.ownerId = ownerId;
@@ -49,6 +50,7 @@ public class RoomResponse implements Serializable {
         this.sharing = sharing;
         this.gender = gender;
         this.food = food;
+        this.foodPreference = foodPreference;
         this.availableFrom = availableFrom;
         this.amenities = amenities;
         this.imageUrls = imageUrls;
@@ -152,6 +154,14 @@ public class RoomResponse implements Serializable {
 
     public void setFood(Boolean food) {
         this.food = food;
+    }
+
+    public String getFoodPreference() {
+        return foodPreference;
+    }
+
+    public void setFoodPreference(String foodPreference) {
+        this.foodPreference = foodPreference;
     }
 
     public LocalDate getAvailableFrom() {

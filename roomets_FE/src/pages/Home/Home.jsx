@@ -353,6 +353,7 @@ const RoomSearchBox = ({ onSearch }) => {
         const location = form.elements.location?.value;
         const budget = form.elements.budget?.value;
         const gender = form.elements.gender?.value;
+        const foodPreference = form.elements.foodPreference?.value;
         const params = {};
 
         if (location && location !== "Any Chennai area") {
@@ -374,6 +375,9 @@ const RoomSearchBox = ({ onSearch }) => {
         if (budget === "Above ₹18,000") params.minRent = "18000";
         if (gender === "Male") params.gender = "MALE";
         if (gender === "Female") params.gender = "FEMALE";
+        if (foodPreference && foodPreference !== "Any food preference") {
+          params.foodPreference = foodPreference;
+        }
 
         onSearch(params);
       }}
@@ -451,7 +455,7 @@ const RoomSearchBox = ({ onSearch }) => {
 
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <FilterSelect
-            name="food"
+            name="foodPreference"
             label="Food preference"
             options={[
               "Any food preference",

@@ -366,7 +366,9 @@ const RoomDetail = () => {
                 <DetailChip label={room.roomType || "Room"} />
                 <DetailChip label={room.sharing || "Shared"} />
                 <DetailChip label={room.gender || "ANY"} />
-                <DetailChip label={room.food ? "Food provided" : "No food"} />
+                <DetailChip
+                  label={room.food ? `Food: ${room.foodPreference || "Provided"}` : "No food"}
+                />
                 <DetailChip
                   icon={<CalendarTodayOutlined />}
                   label={room.availableFrom ? `From ${room.availableFrom}` : "Immediate"}
@@ -473,6 +475,10 @@ const RoomDetail = () => {
                     Login to enquire
                   </Button>
                 </Box>
+              ) : user.seekingClosed ? (
+                <Alert severity="info" sx={{ borderRadius: "12px" }}>
+                  Your room seeking is closed. Reopen it from your profile to send new enquiries.
+                </Alert>
               ) : (
                 <Box component="form" onSubmit={handleEnquiry}>
                   <Typography sx={{ fontSize: "14px", fontWeight: 700, color: "#31516D", mb: 1 }}>

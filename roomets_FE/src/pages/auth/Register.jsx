@@ -32,6 +32,8 @@ const Register = () => {
     confirmPassword: "",
     gender: "",
     userType: "",
+    workingDetails: "",
+    hobbyPreferences: "",
     agreed: false,
   });
 
@@ -99,6 +101,8 @@ const Register = () => {
         password,
         gender,
         userType,
+        workingDetails: formData.workingDetails.trim(),
+        hobbyPreferences: formData.hobbyPreferences.trim(),
       });
 
       setSnackbar({
@@ -315,6 +319,34 @@ const Register = () => {
               </FormControl>
             </Grid>
 
+            {formData.userType === USER_TYPES.SEEKER && (
+              <>
+                <Grid size={12}>
+                  <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#0F766E", mb: 0.5 }}>
+                    Seeker profile (shared with room owners when you enquire)
+                  </Typography>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormField
+                    label="Working details"
+                    name="workingDetails"
+                    value={formData.workingDetails}
+                    onChange={handleChange}
+                    placeholder="e.g. Software engineer at TCS"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <FormField
+                    label="Hobby / preferences"
+                    name="hobbyPreferences"
+                    value={formData.hobbyPreferences}
+                    onChange={handleChange}
+                    placeholder="e.g. Reading, early riser, non-smoker"
+                  />
+                </Grid>
+              </>
+            )}
+
             <Grid
               size={{ xs: 12, sm: 6 }}
               sx={{
@@ -453,7 +485,7 @@ const Register = () => {
   );
 };
 
-const FormField = ({ label, name, type = "text", value, onChange }) => {
+const FormField = ({ label, name, type = "text", value, onChange, placeholder }) => {
   return (
     <Box>
       <Typography
@@ -475,6 +507,7 @@ const FormField = ({ label, name, type = "text", value, onChange }) => {
         type={type}
         value={value}
         onChange={onChange}
+        placeholder={placeholder}
         variant="outlined"
         size="medium"
         sx={{

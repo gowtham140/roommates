@@ -10,8 +10,8 @@ import com.roomates.webModel.RoomResponse;
 
 public interface RoomService {
 
-    Page<RoomResponse> search(String location, BigDecimal minRent, BigDecimal maxRent, String roomType, String gender,
-            Boolean food, int page, int size, String sort);
+    Page<RoomResponse> search(String location, BigDecimal minRent, BigDecimal maxRent, String roomType,
+            String gender, Boolean food, String foodPreference, int page, int size, String sort);
 
     RoomResponse getById(Integer id);
 
