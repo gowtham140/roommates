@@ -1,18 +1,6 @@
-import {
-  Box,
-  Button,
-  Container,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Typography,
-  Grid,
-  Paper,
-} from "@mui/material";
+import { useState } from "react";
+import { Box, Button, Container, Typography, Grid, Paper } from "@mui/material";
 
-import SearchIcon from "@mui/icons-material/Search";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
@@ -22,16 +10,14 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import homelogo from "../../assets/home.png"
 
 import { useNavigate } from "react-router-dom";
+import RoomFilters from "../../components/rooms/RoomFilters";
+import { createRoomFilterValues, toRoomFilterQuery } from "../../components/rooms/roomFilterUtils";
 
 const Home = () => {
   const navigate = useNavigate();
 
-  const handleSearch = (params = {}) => {
-    const query = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value) query.set(key, value);
-    });
-    const search = query.toString();
+  const handleSearch = (values) => {
+    const search = toRoomFilterQuery(values).toString();
     navigate(search ? `/rooms?${search}` : "/rooms");
   };
 
@@ -155,7 +141,7 @@ const Home = () => {
 
             {/* ================= BUTTONS ================= */}
 
-            <Box
+            {/* <Box
               sx={{
                 display: "flex",
 
@@ -227,7 +213,7 @@ const Home = () => {
               >
                 Browse Without Login
               </Button>
-            </Box>
+            </Box> */}
           </Grid>
 
           {/* ================= RIGHT IMAGE ================= */}
@@ -343,44 +329,15 @@ export default Home;
 ===================================================== */
 
 const RoomSearchBox = ({ onSearch }) => {
+  const [values, setValues] = useState(() => createRoomFilterValues());
+
+  const updateFilter = (name, value) => {
+    setValues((current) => ({ ...current, [name]: value }));
+  };
+
   return (
     <Paper
       elevation={0}
-      component="form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const location = form.elements.location?.value;
-        const budget = form.elements.budget?.value;
-        const gender = form.elements.gender?.value;
-        const foodPreference = form.elements.foodPreference?.value;
-        const params = {};
-
-        if (location && location !== "Any Chennai area") {
-          params.location = location;
-        }
-        if (budget === "Below ₹5,000") params.maxRent = "5000";
-        if (budget === "₹5,000 - ₹8,000") {
-          params.minRent = "5000";
-          params.maxRent = "8000";
-        }
-        if (budget === "₹8,000 - ₹12,000") {
-          params.minRent = "8000";
-          params.maxRent = "12000";
-        }
-        if (budget === "₹12,000 - ₹18,000") {
-          params.minRent = "12000";
-          params.maxRent = "18000";
-        }
-        if (budget === "Above ₹18,000") params.minRent = "18000";
-        if (gender === "Male") params.gender = "MALE";
-        if (gender === "Female") params.gender = "FEMALE";
-        if (foodPreference && foodPreference !== "Any food preference") {
-          params.foodPreference = foodPreference;
-        }
-
-        onSearch(params);
-      }}
       sx={{
         width: "100%",
 
@@ -398,217 +355,14 @@ const RoomSearchBox = ({ onSearch }) => {
           "0 12px 30px rgba(40, 80, 100, 0.06)",
       }}
     >
-      <Grid container spacing={1.5}>
-
-        {/* Location */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <FilterSelect
-            name="location"
-            label="Location"
-            options={[
-              "Any Chennai area",
-              "Anna Nagar",
-              "Velachery",
-              "Tambaram",
-              "OMR",
-              "Adyar",
-              "Guindy",
-              "Porur",
-            ]}
-          />
-        </Grid>
-
-        {/* Budget */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <FilterSelect
-            name="budget"
-            label="Budget"
-            options={[
-              "Any budget",
-              "Below ₹5,000",
-              "₹5,000 - ₹8,000",
-              "₹8,000 - ₹12,000",
-              "₹12,000 - ₹18,000",
-              "Above ₹18,000",
-            ]}
-          />
-        </Grid>
-
-        {/* Gender */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <FilterSelect
-            name="gender"
-            label="Gender preference"
-            options={[
-              "Any",
-              "Male",
-              "Female",
-              "Any gender",
-            ]}
-          />
-        </Grid>
-
-        {/* Food */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <FilterSelect
-            name="foodPreference"
-            label="Food preference"
-            options={[
-              "Any food preference",
-              "Vegetarian",
-              "Non-Vegetarian",
-              "Both",
-            ]}
-          />
-        </Grid>
-
-        {/* Date */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <Box>
-            <Typography
-              sx={{
-                fontSize: "14px",
-
-                fontWeight: 700,
-
-                color: "#31516D",
-
-                mb: 0.8,
-              }}
-            >
-              Move-in date
-            </Typography>
-
-            <TextField
-              fullWidth
-              type="date"
-              sx={fieldStyles}
-            />
-          </Box>
-        </Grid>
-
-        {/* Search */}
-
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <Box
-            sx={{
-              height: "100%",
-
-              display: "flex",
-
-              alignItems: "flex-end",
-            }}
-          >
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              startIcon={<SearchIcon />}
-              sx={{
-                height: 47,
-
-                borderRadius: "11px",
-
-                backgroundColor: "#3737E8",
-
-                textTransform: "none",
-
-                fontSize: "14px",
-
-                fontWeight: 700,
-
-                boxShadow: "none",
-
-                "&:hover": {
-                  backgroundColor: "#2F30D1",
-
-                  boxShadow: "none",
-                },
-              }}
-            >
-              Search
-            </Button>
-          </Box>
-        </Grid>
-
-      </Grid>
+      <RoomFilters
+        values={values}
+        onChange={updateFilter}
+        onClear={() => setValues(createRoomFilterValues())}
+        onSubmit={() => onSearch(values)}
+        submitLabel="Search"
+      />
     </Paper>
-  );
-};
-
-
-/* =====================================================
-   SELECT
-===================================================== */
-
-const FilterSelect = ({ name, label, options }) => {
-  return (
-    <FormControl fullWidth>
-      <InputLabel
-        shrink
-        sx={{
-          position: "static",
-
-          transform: "none",
-
-          fontSize: "14px",
-
-          fontWeight: 700,
-
-          color: "#31516D",
-
-          mb: 0.8,
-        }}
-      >
-        {label}
-      </InputLabel>
-
-      <Select
-        name={name}
-        defaultValue={options[0]}
-        size="small"
-        sx={{
-          height: 47,
-
-          borderRadius: "11px",
-
-          color: "#294765",
-
-          fontSize: "14px",
-
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#BDD3DF",
-          },
-
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#91B3C3",
-          },
-
-          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#3737E8",
-
-            borderWidth: "1.5px",
-          },
-        }}
-      >
-        {options.map((option) => (
-          <MenuItem
-            key={option}
-            value={option}
-            sx={{
-              fontSize: "14px",
-            }}
-          >
-            {option}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
   );
 };
 
@@ -802,39 +556,4 @@ const TrustCards = () => {
       ))}
     </Grid>
   );
-};
-
-
-/* =====================================================
-   FIELD STYLES
-===================================================== */
-
-const fieldStyles = {
-  "& .MuiOutlinedInput-root": {
-    height: 47,
-
-    borderRadius: "11px",
-
-    backgroundColor: "#FFFFFF",
-
-    "& fieldset": {
-      borderColor: "#BDD3DF",
-    },
-
-    "&:hover fieldset": {
-      borderColor: "#91B3C3",
-    },
-
-    "&.Mui-focused fieldset": {
-      borderColor: "#3737E8",
-
-      borderWidth: "1.5px",
-    },
-  },
-
-  "& .MuiOutlinedInput-input": {
-    fontSize: "14px",
-
-    color: "#294765",
-  },
 };

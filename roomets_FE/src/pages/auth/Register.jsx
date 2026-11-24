@@ -75,6 +75,11 @@ const Register = () => {
       return;
     }
 
+    if (!/^\d{10}$/.test(mobile.trim())) {
+      setError("Mobile number must be 10 digits.");
+      return;
+    }
+
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.");
       return;
@@ -249,6 +254,7 @@ const Register = () => {
                 type="tel"
                 value={formData.mobile}
                 onChange={handleChange}
+                inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: 10 }}
               />
             </Grid>
 
@@ -485,7 +491,7 @@ const Register = () => {
   );
 };
 
-const FormField = ({ label, name, type = "text", value, onChange, placeholder }) => {
+const FormField = ({ label, name, type = "text", value, onChange, placeholder, inputProps }) => {
   return (
     <Box>
       <Typography
@@ -508,6 +514,7 @@ const FormField = ({ label, name, type = "text", value, onChange, placeholder })
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        inputProps={inputProps}
         variant="outlined"
         size="medium"
         sx={{
