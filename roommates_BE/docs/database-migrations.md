@@ -23,7 +23,7 @@ For an empty database, `V1__baseline.sql` creates the schema and Flyway marks it
 - `spring.datasource.username`
 - `spring.datasource.password`
 - `spring.datasource.url` (defaults to local MySQL)
-- `resend.api.key`, `app.mail.from` (required to send email)
+- `brevo.api.key`, `app.mail.from` (required to send email; `resend.api.key` is optional fallback)
 - `app.admin.bootstrap.email`, `app.admin.bootstrap.password` (optional, `prod` only, first admin only)
 
 Seed demo/admin accounts are only created when the `local` profile is active. In `prod`, the bootstrap admin is created only when both admin values are set and the email does not already exist.

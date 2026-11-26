@@ -4,7 +4,7 @@ Room-rental marketplace with a React (Vite) frontend, a Spring Boot backend, and
 
 ## Architecture
 
-- `roommates_BE/` — Spring Boot 4.1.1, Java 21, Maven wrapper, executable WAR, JPA, Spring Security + JWT, Resend/OTP mail, image uploads. Serves `/api/**` and `/uploads/**` on port `8080`.
+- `roommates_BE/` — Spring Boot 4.1.1, Java 21, Maven wrapper, executable WAR, JPA, Spring Security + JWT, Brevo/Resend OTP mail, image uploads. Serves `/api/**` and `/uploads/**` on port `8080`.
 - `roomets_FE/` — React 19 + Vite, Axios, MUI, Leaflet. Dev server on port `5173`. `VITE_API_URL` is baked in at build time and defaults to `https://roommates-ky68.onrender.com` in `roomets_FE/src/API/app-config.js`.
 - MySQL 8 — application data. Docker Compose runs MySQL, backend, and frontend together; nginx proxies `/api/` and `/uploads/` to the backend.
 - Uploaded images are stored in the S3-compatible bucket under `rooms/...` and served by the backend from `/uploads/rooms/...`.
@@ -23,9 +23,10 @@ Edit `roommates_BE/src/main/resources/application.properties` before starting an
 | --- | --- |
 | `JWT_SECRET` | JWT signing secret; use at least 32 random bytes |
 | `spring.datasource.*` | JDBC connection set directly in `application.properties` |
-| `RESEND_API_KEY` | Resend API key for OTP and enquiry notification email; leave blank to disable outgoing mail locally |
-| `MAIL_FROM` | Resend sender address; free-mail addresses are replaced with `onboarding@resend.dev`, and production recipients require a verified domain sender |
-| `APP_MAIL_DEV_CONSOLE_OTP` | Local fallback when Resend is blank; logs and returns the OTP, forced off in `prod` via profile config |
+| `BREVO_API_KEY` | Primary Brevo API key for OTP and enquiry notification email; leave blank to use Resend |
+| `RESEND_API_KEY` | Fallback Resend API key; test mode only sends to the Resend account owner |
+| `MAIL_FROM` | Brevo-verified sender address, currently `supportroomates@gmail.com`; Resend fallback rewrites free-mail senders to `onboarding@resend.dev` |
+| `APP_MAIL_DEV_CONSOLE_OTP` | Local fallback when no mail provider is configured; logs and returns the OTP, forced off in `prod` via profile config |
 | `FRONTEND_URL` | Public frontend origin used in generated mail links |
 | `STORAGE_BUCKET`, `STORAGE_ENDPOINT`, `STORAGE_REGION` | S3-compatible bucket, endpoint, and signing region |
 | `storage.s3.access-key`, `storage.s3.secret-key` | S3-compatible credentials in `application.properties` (or deployment environment) |
@@ -38,7 +39,7 @@ Edit `roommates_BE/src/main/resources/application.properties` before starting an
 | `BACKEND_URL` | nginx proxy target, substituted at container startup |
 | `MYSQL_ROOT_PASSWORD` | MySQL root password used by Compose |
 
-`application.properties` owns all backend config (DB, JWT, mail, S3, CORS, Actuator). `application-local.properties` and `application-prod.properties` contain only profile-specific DDL/Flyway settings. `prod` uses `ddl-auto=validate`, Flyway, and `clean-disabled=true` so the production database is never wiped. When `RESEND_API_KEY` or `MAIL_FROM` is blank locally, `/api/auth/send-otp` returns the OTP in `data` and logs it instead of emailing; `prod` rejects unconfigured mail.
+`application.properties` owns all backend config (DB, JWT, mail, S3, CORS, Actuator). `application-local.properties` and `application-prod.properties` contain only profile-specific DDL/Flyway settings. `prod` uses `ddl-auto=validate`, Flyway, and `clean-disabled=true` so the production database is never wiped. Brevo is tried first when configured, then Resend. When neither provider nor `MAIL_FROM` is configured locally, `/api/auth/send-otp` returns the OTP in `data` and logs it instead of emailing; `prod` rejects unconfigured mail.
 
 ## Local development
 
