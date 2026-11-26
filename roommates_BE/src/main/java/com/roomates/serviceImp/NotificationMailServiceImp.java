@@ -3,9 +3,6 @@ package com.roomates.serviceImp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
@@ -13,32 +10,21 @@ import org.springframework.web.util.HtmlUtils;
 import com.roomates.model.Enquiry;
 import com.roomates.model.Room;
 import com.roomates.model.User;
+import com.roomates.service.EmailSender;
 import com.roomates.service.NotificationMailService;
-
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class NotificationMailServiceImp implements NotificationMailService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationMailServiceImp.class);
 
-    private final JavaMailSender mailSender;
-
-    @Value("${app.mail.from:}")
-    private String mailFrom;
-
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
-
-    @Value("${spring.mail.password:}")
-    private String mailPassword;
+    private final EmailSender emailSender;
 
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
-    public NotificationMailServiceImp(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    public NotificationMailServiceImp(EmailSender emailSender) {
+        this.emailSender = emailSender;
     }
 
     @Override
@@ -48,12 +34,11 @@ public class NotificationMailServiceImp implements NotificationMailService {
         if (owner == null || !StringUtils.hasText(owner.getMailID())) {
             return;
         }
-        if (!StringUtils.hasText(mailUsername) || !StringUtils.hasText(mailPassword)) {
+        if (!emailSender.isConfigured()) {
             log.debug("Skipping enquiry notification email because mail is not configured");
             return;
         }
 
-        String from = StringUtils.hasText(mailFrom) ? mailFrom : mailUsername;
         String roomTitle = value(room.getTitle());
         String ownerName = value(owner.getName());
         String seekerName = value(enquiry.getSeeker() == null ? null : enquiry.getSeeker().getName());
@@ -64,15 +49,12 @@ public class NotificationMailServiceImp implements NotificationMailService {
         String dashboardUrl = frontendUrl.replaceAll("/+$", "") + "/enquiries";
 
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(owner.getMailID());
-            helper.setSubject("New enquiry for " + roomTitle + " - RoomMate Finder");
-            helper.setText(plainText(ownerName, seekerName, roomTitle, location, seekerEmail, seekerPhone, message),
+            emailSender.sendHtml(
+                    owner.getMailID(),
+                    "New enquiry for " + roomTitle + " - RoomMate Finder",
+                    plainText(ownerName, seekerName, roomTitle, location, seekerEmail, seekerPhone, message),
                     html(ownerName, seekerName, roomTitle, location, seekerEmail, seekerPhone, message, dashboardUrl));
-            mailSender.send(mimeMessage);
-        } catch (MessagingException | MailException ex) {
+        } catch (RuntimeException ex) {
             log.warn("Failed to send enquiry notification email to {}", owner.getMailID(), ex);
         }
     }

@@ -8,10 +8,6 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailAuthenticationException;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +19,7 @@ import com.roomates.model.User;
 import com.roomates.repository.EmailOtpRepository;
 import com.roomates.repository.UserRepository;
 import com.roomates.service.EmailOtpService;
+import com.roomates.service.EmailSender;
 
 @Service
 public class EmailOtpServiceImp implements EmailOtpService {
@@ -31,35 +28,26 @@ public class EmailOtpServiceImp implements EmailOtpService {
 	private static final int MAX_ATTEMPTS = 5;
 	private static final SecureRandom RANDOM = new SecureRandom();
 
-	private final JavaMailSender mailSender;
+	private final EmailSender emailSender;
 	private final EmailOtpRepository otpRepository;
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final OtpRateLimiter rateLimiter;
 	private final OtpAttemptService otpAttemptService;
-	private final String fromAddress;
-	private final String mailUsername;
-	private final String mailPassword;
 	private final long expirationMs;
 	private final boolean devConsoleOtp;
 
-	public EmailOtpServiceImp(JavaMailSender mailSender, EmailOtpRepository otpRepository,
+	public EmailOtpServiceImp(EmailSender emailSender, EmailOtpRepository otpRepository,
 			UserRepository userRepository, PasswordEncoder passwordEncoder, OtpRateLimiter rateLimiter,
-			OtpAttemptService otpAttemptService, @Value("${app.mail.from:}") String fromAddress,
-			@Value("${spring.mail.username:}") String mailUsername,
-			@Value("${spring.mail.password:}") String mailPassword,
-			@Value("${app.otp.expiration-ms:600000}") long expirationMs,
+			OtpAttemptService otpAttemptService, @Value("${app.otp.expiration-ms:600000}") long expirationMs,
 			@Value("${app.mail.dev-console-otp:false}") boolean devConsoleOtp) {
 
-		this.mailSender = mailSender;
+		this.emailSender = emailSender;
 		this.otpRepository = otpRepository;
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.rateLimiter = rateLimiter;
 		this.otpAttemptService = otpAttemptService;
-		this.fromAddress = fromAddress;
-		this.mailUsername = mailUsername;
-		this.mailPassword = mailPassword;
 		this.expirationMs = expirationMs;
 		this.devConsoleOtp = devConsoleOtp;
 	}
@@ -69,7 +57,7 @@ public class EmailOtpServiceImp implements EmailOtpService {
 	public String sendOtp(String email, String purpose) {
 		String normalized = normalize(email);
 		requireSupportedPurpose(purpose);
-		boolean mailConfigured = StringUtils.hasText(mailUsername) && StringUtils.hasText(mailPassword);
+		boolean mailConfigured = emailSender.isConfigured();
 		if (!mailConfigured && !devConsoleOtp) {
 			throw new BadRequestException("Email service is not configured yet. Please contact support");
 		}
@@ -96,49 +84,29 @@ public class EmailOtpServiceImp implements EmailOtpService {
 		otpRepository.deleteByExpiresAtBefore(LocalDateTime.now());
 
 		if (!mailConfigured) {
-			log.warn("Mail is not configured; OTP delivery is using the console for {}. Code: {}", normalized, otp);
+			log.warn("Email is not configured; OTP delivery is using the console for {}. Code: {}", normalized, otp);
 			return otp;
 		}
 
-		SimpleMailMessage message = new SimpleMailMessage();
-		message.setFrom(StringUtils.hasText(fromAddress) ? fromAddress : mailUsername);
-		message.setTo(normalized);
+		String subject;
+		String text;
 		if (PURPOSE_REGISTER.equals(purpose)) {
-			message.setSubject("Verify your email - RoomMate Finder");
-			message.setText("Your email verification code is " + otp + ". It expires in " + (expirationMs / 60000)
-					+ " minutes.");
+			subject = "Verify your email - RoomMate Finder";
+			text = "Your email verification code is " + otp + ". It expires in " + (expirationMs / 60000)
+					+ " minutes.";
 		} else {
-			message.setSubject("Reset your password - RoomMate Finder");
-			message.setText("Your password reset code is " + otp + ". It expires in " + (expirationMs / 60000)
-					+ " minutes. " + "If you did not request this, you can ignore this email.");
+			subject = "Reset your password - RoomMate Finder";
+			text = "Your password reset code is " + otp + ". It expires in " + (expirationMs / 60000)
+					+ " minutes. If you did not request this, you can ignore this email.";
 		}
 
 		try {
-
-			mailSender.send(message);
-
+			emailSender.sendText(normalized, subject, text);
 			log.info("OTP email successfully sent to {}", normalized);
-
-		} catch (MailException ex) {
-
+		} catch (RuntimeException ex) {
 			log.error("OTP email failed for {}", normalized, ex);
-
-			Throwable cause = ex;
-
-			while (cause != null) {
-
-				log.error("Cause: {} | Message: {}", cause.getClass().getName(), cause.getMessage());
-
-				cause = cause.getCause();
-			}
-
 			otpAttemptService.delete(record.getId());
 			rateLimiter.refund(normalized);
-
-			if (ex instanceof MailAuthenticationException) {
-				throw new BadRequestException("Email service credentials are invalid. Please contact support");
-			}
-
 			throw new BadRequestException("Unable to send the verification email right now");
 		}
 		return null;

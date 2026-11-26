@@ -23,7 +23,8 @@ services:
     environment:
       DB_URL: "jdbc:mysql://mysql:3306/roommates_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
       SERVER_PORT: 8080
-      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD:-${MAIL_PASSWORD:-}}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-onboarding@resend.dev}
     ports:
       - "8080:8080"
     depends_on:

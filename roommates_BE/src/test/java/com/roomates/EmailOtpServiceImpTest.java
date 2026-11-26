@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,8 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.roomates.exception.BadRequestException;
@@ -31,6 +31,7 @@ import com.roomates.model.User;
 import com.roomates.repository.EmailOtpRepository;
 import com.roomates.repository.UserRepository;
 import com.roomates.service.EmailOtpService;
+import com.roomates.service.EmailSender;
 import com.roomates.serviceImp.EmailOtpServiceImp;
 import com.roomates.serviceImp.OtpAttemptService;
 import com.roomates.serviceImp.OtpRateLimiter;
@@ -39,7 +40,7 @@ import com.roomates.serviceImp.OtpRateLimiter;
 class EmailOtpServiceImpTest {
 
     @Mock
-    private JavaMailSender mailSender;
+    private EmailSender emailSender;
 
     @Mock
     private EmailOtpRepository otpRepository;
@@ -57,8 +58,9 @@ class EmailOtpServiceImpTest {
 
     @BeforeEach
     void setUp() {
-        service = new EmailOtpServiceImp(mailSender, otpRepository, userRepository, passwordEncoder,
-                new OtpRateLimiter(), otpAttemptService, "", "account@gmail.com", "app-password", 600000L, false);
+        lenient().when(emailSender.isConfigured()).thenReturn(true);
+        service = new EmailOtpServiceImp(emailSender, otpRepository, userRepository, passwordEncoder,
+                new OtpRateLimiter(), otpAttemptService, 600000L, false);
     }
 
     @Test
@@ -78,10 +80,7 @@ class EmailOtpServiceImpTest {
         assertEquals(EmailOtpService.PURPOSE_REGISTER, saved.getPurpose());
         assertTrue(saved.getExpiresAt().isAfter(LocalDateTime.now()));
 
-        ArgumentCaptor<SimpleMailMessage> mailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender).send(mailCaptor.capture());
-        assertEquals("account@gmail.com", mailCaptor.getValue().getFrom());
-        assertEquals("user@example.com", mailCaptor.getValue().getTo()[0]);
+        verify(emailSender).sendText(eq("user@example.com"), anyString(), anyString());
     }
 
     @Test
@@ -142,8 +141,8 @@ class EmailOtpServiceImpTest {
     @Test
     void sendOtpIsRateLimitedPerEmail() {
         Clock fixedClock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
-        EmailOtpServiceImp limited = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
-                passwordEncoder, new OtpRateLimiter(fixedClock), otpAttemptService, "", "account@gmail.com", "app-password", 600000L, false);
+        EmailOtpServiceImp limited = new EmailOtpServiceImp(emailSender, otpRepository, userRepository,
+                passwordEncoder, new OtpRateLimiter(fixedClock), otpAttemptService, 600000L, false);
         when(userRepository.findByMailID("user@example.com")).thenReturn(null);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed-otp");
 
@@ -154,14 +153,15 @@ class EmailOtpServiceImpTest {
                 () -> limited.sendOtp("user@example.com", EmailOtpService.PURPOSE_REGISTER));
 
         assertTrue(exception.getMessage().contains("10 minutes"));
-        verify(mailSender, times(OtpRateLimiter.MAX_REQUESTS)).send(any(SimpleMailMessage.class));
+        verify(emailSender, times(OtpRateLimiter.MAX_REQUESTS)).sendText(anyString(), anyString(), anyString());
         verify(otpRepository, times(OtpRateLimiter.MAX_REQUESTS)).save(any(EmailOtp.class));
     }
 
     @Test
     void sendOtpRequiresMailCredentials() {
-        EmailOtpServiceImp unconfigured = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
-                passwordEncoder, new OtpRateLimiter(), otpAttemptService, "", "", "", 600000L, false);
+        when(emailSender.isConfigured()).thenReturn(false);
+        EmailOtpServiceImp unconfigured = new EmailOtpServiceImp(emailSender, otpRepository, userRepository,
+                passwordEncoder, new OtpRateLimiter(), otpAttemptService, 600000L, false);
 
         assertThrows(BadRequestException.class,
                 () -> unconfigured.sendOtp("user@example.com", EmailOtpService.PURPOSE_REGISTER));
@@ -170,8 +170,9 @@ class EmailOtpServiceImpTest {
 
     @Test
     void sendOtpUsesConsoleFallbackWhenMailIsUnconfigured() {
-        EmailOtpServiceImp console = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
-                passwordEncoder, new OtpRateLimiter(), otpAttemptService, "", "", "", 600000L, true);
+        when(emailSender.isConfigured()).thenReturn(false);
+        EmailOtpServiceImp console = new EmailOtpServiceImp(emailSender, otpRepository, userRepository,
+                passwordEncoder, new OtpRateLimiter(), otpAttemptService, 600000L, true);
         when(userRepository.findByMailID("user@example.com")).thenReturn(null);
         when(otpRepository.findByEmailAndPurpose("user@example.com", EmailOtpService.PURPOSE_REGISTER))
                 .thenReturn(Optional.empty());
@@ -181,6 +182,6 @@ class EmailOtpServiceImpTest {
 
         assertTrue(otp.matches("\\d{6}"));
         verify(otpRepository).save(any(EmailOtp.class));
-        verify(mailSender, org.mockito.Mockito.never()).send(any(SimpleMailMessage.class));
+        verify(emailSender, org.mockito.Mockito.never()).sendText(anyString(), anyString(), anyString());
     }
 }
