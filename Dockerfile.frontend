@@ -3,7 +3,7 @@ WORKDIR /build
 COPY roomets_FE/package.json roomets_FE/package-lock.json ./
 RUN npm ci
 COPY roomets_FE/ ./
-ARG VITE_API_URL=/
+ARG VITE_API_URL=https://roommates-ky68.onrender.com
 RUN VITE_API_URL="$VITE_API_URL" npm run build
 
 FROM nginx:alpine

@@ -25,7 +25,7 @@ Spring Boot Actuator is configured. Use `GET /actuator/health` as the public pro
 
 - `CORS_ALLOWED_ORIGINS` must contain the exact browser origin (scheme + host + port). With the Compose nginx proxy, callers use the frontend origin, e.g. `http://localhost`; for direct API access, add the frontend origin used by users.
 - `FRONTEND_URL` is used for links in outgoing mail; set it to the same public frontend origin.
-- `VITE_API_URL` is compiled into the JS bundle by Vite and cannot be changed by runtime env vars. The Dockerfiles default it to `/`, so the browser calls `/api/...` and `/uploads/...` on the frontend origin and nginx proxies them to `BACKEND_URL`. To use a different API origin, rebuild the frontend with `--build-arg VITE_API_URL=<origin>` and update `CORS_ALLOWED_ORIGINS` accordingly.
+- `VITE_API_URL` is compiled into the JS bundle by Vite and cannot be changed by runtime env vars. The Dockerfiles default it to `https://roommates-ky68.onrender.com`, so the browser calls the production backend directly. To use a different API origin, rebuild the frontend with `--build-arg VITE_API_URL=<origin>` and update `CORS_ALLOWED_ORIGINS` accordingly.
 - `nginx.conf` is installed as an nginx template; the frontend image sets `NGINX_ENVSUBST_FILTER=BACKEND_URL` so `${BACKEND_URL}` is replaced at startup while nginx variables such as `$uri` remain intact.
 
 ## Tests before release

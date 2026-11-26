@@ -5,7 +5,7 @@ Room-rental marketplace with a React (Vite) frontend, a Spring Boot backend, and
 ## Architecture
 
 - `roommates_BE/` — Spring Boot 4.1.1, Java 21, Maven wrapper, executable WAR, JPA, Spring Security + JWT, SMTP/OTP, image uploads. Serves `/api/**` and `/uploads/**` on port `8080`.
-- `roomets_FE/` — React 19 + Vite, Axios, MUI, Leaflet. Dev server on port `5173`. `VITE_API_URL` is baked in at build time (defaults to `http://localhost:8080/` in `roomets_FE/src/API/app-config.js`).
+- `roomets_FE/` — React 19 + Vite, Axios, MUI, Leaflet. Dev server on port `5173`. `VITE_API_URL` is baked in at build time and defaults to `https://roommates-ky68.onrender.com` in `roomets_FE/src/API/app-config.js`.
 - MySQL 8 — application data. Docker Compose runs MySQL, backend, and frontend together; nginx proxies `/api/` and `/uploads/` to the backend.
 - Uploaded images are stored in the S3-compatible bucket under `rooms/...` and served by the backend from `/uploads/rooms/...`.
 
@@ -36,7 +36,7 @@ Edit `roommates_BE/src/main/resources/application.properties` before starting an
 | `OTP_EXPIRATION_MS` | OTP lifetime in milliseconds |
 | `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD` | Optional first admin created only in `prod` when the account does not exist |
 | `SPRING_PROFILES_ACTIVE` | Leave unset so `application.properties` controls the profile; switch there between `local` and `prod` |
-| `VITE_API_URL` | Frontend API base, baked into JS at build time; `/` enables the nginx proxy |
+| `VITE_API_URL` | Frontend API base, baked into JS at build time; defaults to `https://roommates-ky68.onrender.com` |
 | `BACKEND_URL` | nginx proxy target, substituted at container startup |
 | `MYSQL_ROOT_PASSWORD` | MySQL root password used by Compose |
 
@@ -82,6 +82,6 @@ cd roomets_FE && npm run build
 docker compose up --build
 ```
 
-Frontend is served on port `80`, backend on `8080`, and uploads persist in the S3-compatible bucket. Build-time `VITE_API_URL=/` makes the browser call the same origin; nginx forwards `/api/` and `/uploads/` to `BACKEND_URL`. Runtime env changes cannot rewrite the built JS; rebuild the frontend image for a different API origin.
+Frontend is served on port `80`, backend on `8080`, and uploads persist in the S3-compatible bucket. Build-time `VITE_API_URL` defaults to `https://roommates-ky68.onrender.com`; the browser calls that origin and `CORS_ALLOWED_ORIGINS` must allow the frontend origin. Runtime env changes cannot rewrite the built JS; rebuild the frontend image for a different API origin.
 
 See `docs/DEPLOYMENT.md` for production notes.

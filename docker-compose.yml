@@ -41,7 +41,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        VITE_API_URL: ${VITE_API_URL:-/}
+        VITE_API_URL: ${VITE_API_URL:-https://roommates-ky68.onrender.com}
     environment:
       BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
       NGINX_ENVSUBST_FILTER: BACKEND_URL
