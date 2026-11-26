@@ -7,11 +7,11 @@
 3. Run the backend with JDK 21: `cd roommates_BE && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 mvn spring-boot:run`.
 4. Run the frontend: `cd roomets_FE && npm ci && npm run dev`.
 
-The `local` profile is active by default in `application.properties` and enables seed data. `DataInitializer` is gated to `local` and legacy `dev`; delete any demo accounts already created in an older database. With blank SMTP credentials, `APP_MAIL_DEV_CONSOLE_OTP=true` logs the OTP and returns it in `/api/auth/send-otp` instead of emailing it. With SMTP configured, `send-otp` sends real mail; store Gmail app passwords without spaces.
+The active profile is controlled in `application.properties`; `local` enables seed data. `DataInitializer` is gated to `local` and legacy `dev`; delete any demo accounts already created in an older database. With blank SMTP credentials, `APP_MAIL_DEV_CONSOLE_OTP=true` logs the OTP and returns it in `/api/auth/send-otp` instead of emailing it. With SMTP configured, `send-otp` sends real mail; Gmail app passwords are accepted with or without spaces because the backend strips whitespace.
 
 ## Production
 
-- All backend config lives in `application.properties`: DB, JWT, mail, S3, CORS, Actuator, and frontend URL. `JWT_SECRET` falls back safely instead of failing bean creation.
+- All backend config lives in `application.properties`: DB, JWT, mail, S3, CORS, Actuator, and frontend URL. Set `MAIL_USERNAME` to the Gmail account that owns the app password and set `MAIL_APP_PASSWORD` (or `MAIL_PASSWORD`) in deployment; `JWT_SECRET` falls back safely instead of failing bean creation.
 - Switch `application.properties` to `#spring.profiles.active=prod` / `spring.profiles.active=local` as needed, and replace the commented production `spring.datasource.*` block before deploying. `application-local.properties` and `application-prod.properties` contain only DDL/Flyway settings.
 - Seed data never runs outside `local`/`dev`; set `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` once to create the first admin if none exists. The `prod` profile uses Flyway with `ddl-auto=validate` and `spring.flyway.clean-disabled=true`; it never wipes the production database. Follow `roommates_BE/docs/database-migrations.md` for existing databases.
 - Start with `docker compose up -d --build`. Backend listens on `8080`; nginx serves the frontend on `80`.

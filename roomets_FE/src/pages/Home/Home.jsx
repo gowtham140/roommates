@@ -91,8 +91,8 @@ const Home = () => {
                   "Georgia, 'Times New Roman', serif",
 
                 fontSize: {
-                  xs: "42px",
-                  sm: "52px",
+                  xs: "34px",
+                  sm: "42px",
                   md: "54px",
                 },
 
@@ -106,11 +106,15 @@ const Home = () => {
 
                 maxWidth: "680px",
 
+                overflowWrap: "break-word",
+
                 mb: 2,
               }}
             >
               Find the Right Roommate.
-              <br />
+              <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                <br />
+              </Box>
               Live Better.
             </Typography>
 
@@ -506,13 +510,17 @@ const TrustCards = () => {
           <Paper
             elevation={0}
             sx={{
-              height: 56,
+              minHeight: 56,
+
+              height: "100%",
 
               display: "flex",
 
-              alignItems: "center",
+              alignItems: "flex-start",
 
-              px: 2,
+              py: 1,
+
+              px: { xs: 1.25, sm: 2 },
 
               borderRadius: "16px",
 
@@ -530,7 +538,7 @@ const TrustCards = () => {
 
                 display: "flex",
 
-                mr: 1.5,
+                mr: { xs: 1, sm: 1.5 },
 
                 "& svg": {
                   fontSize: 23,
@@ -542,7 +550,9 @@ const TrustCards = () => {
 
             <Typography
               sx={{
-                fontSize: "13px",
+                fontSize: { xs: "12px", sm: "13px" },
+
+                lineHeight: 1.3,
 
                 fontWeight: 700,
 

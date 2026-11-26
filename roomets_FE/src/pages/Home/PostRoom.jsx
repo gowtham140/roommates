@@ -639,6 +639,7 @@ const PostRoom = () => {
                     {AMENITIES.map((amenity) => (
                       <FormControlLabel
                         key={amenity}
+                        sx={{ minWidth: 0, mr: 0, alignItems: "flex-start" }}
                         control={
                           <Checkbox
                             checked={field.value.includes(amenity)}
@@ -656,7 +657,13 @@ const PostRoom = () => {
                           />
                         }
                         label={
-                          <Typography sx={{ fontSize: "13.5px", color: "#243858" }}>
+                          <Typography
+                            sx={{
+                              fontSize: { xs: "12.5px", sm: "13.5px" },
+                              lineHeight: 1.3,
+                              color: "#243858",
+                            }}
+                          >
                             {amenity}
                           </Typography>
                         }

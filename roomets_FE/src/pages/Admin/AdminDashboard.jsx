@@ -197,7 +197,7 @@ const AdminDashboard = () => {
               />
             ))}
           </Box>
-          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
+          <TableContainer sx={{ display: { xs: "none", md: "block" }, maxWidth: "100%", overflowX: "auto" }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#F8FAFC" }}>
@@ -274,7 +274,7 @@ const AdminDashboard = () => {
               />
             ))}
           </Box>
-          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
+          <TableContainer sx={{ display: { xs: "none", md: "block" }, maxWidth: "100%", overflowX: "auto" }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#F8FAFC" }}>

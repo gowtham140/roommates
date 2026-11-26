@@ -78,7 +78,7 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
     <Box
       sx={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))",
         gap: 1.5,
         alignItems: "end",
       }}
@@ -184,9 +184,10 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         sx={{
           gridColumn: "1 / -1",
           display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
           gap: 1.2,
-          alignItems: "center",
-          flexWrap: "wrap",
+          alignItems: { xs: "stretch", sm: "center" },
+          flexWrap: { sm: "wrap" },
           mt: 0.5,
         }}
       >
@@ -197,7 +198,8 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
           disabled={invalidRentRange}
           sx={{
             height: 47,
-            minWidth: 170,
+            width: { xs: "100%", sm: "auto" },
+            minWidth: { xs: 0, sm: 170 },
             borderRadius: "11px",
             backgroundColor: "#3730E8",
             textTransform: "none",
@@ -214,6 +216,7 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
             onClick={onClear}
             sx={{
               height: 47,
+              width: { xs: "100%", sm: "auto" },
               borderRadius: "11px",
               color: "#667085",
               textTransform: "none",

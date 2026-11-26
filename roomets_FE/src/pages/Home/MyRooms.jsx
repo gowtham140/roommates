@@ -331,7 +331,7 @@ const MyRooms = () => {
                       sx={{
                         mt: "auto",
                         display: "grid",
-                        gridTemplateColumns: { xs: "1fr 1fr" },
+                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
                         gap: 1,
                       }}
                     >
@@ -472,13 +472,17 @@ const primaryButtonStyles = {
 };
 
 const smallButtonStyles = {
-  height: 42,
+  minHeight: 42,
+  height: "auto",
   borderRadius: "10px",
   borderColor: "#BDD3DF",
   color: "#1D3553",
   textTransform: "none",
   fontWeight: 700,
   fontSize: "13px",
+  lineHeight: 1.2,
+  whiteSpace: "normal",
+  py: 0.75,
   "&:hover": { borderColor: "#3730E8", color: "#3730E8" },
 };
 

@@ -361,13 +361,19 @@ const FindRooms = () => {
             </Grid>
 
             {totalPages > 1 && (
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 4, px: 0.5 }}>
                 <Pagination
                   count={totalPages}
                   page={page + 1}
                   onChange={(_, value) => setPage(value - 1)}
                   color="primary"
                   shape="rounded"
+                  size="small"
+                  siblingCount={0}
+                  sx={{
+                    maxWidth: "100%",
+                    "& .MuiPagination-ul": { flexWrap: "wrap", justifyContent: "center" },
+                  }}
                 />
               </Box>
             )}
@@ -454,11 +460,16 @@ const RoomCard = ({ room, userPosition, saved, onSave, onView }) => {
             position: "absolute",
             bottom: 12,
             left: 12,
-            maxWidth: "85%",
+            maxWidth: { xs: "60%", sm: "85%" },
             backgroundColor: "rgba(20,42,74,0.88)",
             color: "#FFFFFF",
             fontWeight: 600,
             "& .MuiChip-icon": { color: "#FFFFFF" },
+            "& .MuiChip-label": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
           }}
         />
 
@@ -472,10 +483,16 @@ const RoomCard = ({ room, userPosition, saved, onSave, onView }) => {
               position: "absolute",
               bottom: 12,
               right: 12,
+              maxWidth: "35%",
               backgroundColor: "rgba(255,255,255,0.95)",
               color: "#0F9D8A",
               fontWeight: 700,
               "& .MuiChip-icon": { color: "#0F9D8A" },
+              "& .MuiChip-label": {
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              },
             }}
           />
         )}

@@ -243,7 +243,8 @@ const Navbar = () => {
                     <Typography sx={{ fontSize: 11, color: "#667085", lineHeight: 1.2 }} noWrap>{owner ? "Owner" : seeker ? "Seeker" : "Account"}</Typography>
                   </Box>
                 </Button>
-                <Menu id="account-menu" anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)} PaperProps={{ sx: { mt: 1, borderRadius: "14px", minWidth: 240, border: "1px solid #E8ECF2" } }}>
+                <Menu id="account-menu" anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)} PaperProps={{ sx: { mt: 1, borderRadius: "14px", width: { xs: "min(240px, calc(100vw - 32px))", sm: 240 }, maxWidth: "calc(100vw - 32px)", border: "1px solid #E8ECF2" } }}
+>
                   <Box sx={{ px: 2, py: 1.25 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{user.name}</Typography>
                     <Typography sx={{ fontSize: 12, color: "#667085" }} noWrap>{user.email}</Typography>
@@ -285,7 +286,7 @@ const Navbar = () => {
       </Container>
 
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box sx={{ width: { xs: 300, sm: 340 }, p: 2 }} role="presentation">
+        <Box sx={{ width: { xs: "min(300px, calc(100vw - 24px))", sm: 340 }, maxWidth: "calc(100vw - 24px)", p: 2 }} role="presentation">
           {user && (
             <Box sx={{ p: 1.5, mb: 1.5, borderRadius: "14px", backgroundColor: "#F7FAFC", border: "1px solid #E6EDF3" }}>
               <Stack direction="row" spacing={1.5} alignItems="center">

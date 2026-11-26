@@ -174,7 +174,14 @@ const Profile = () => {
                     {displayed.name || "RoomMate member"}
                   </Typography>
 
-                  <Typography sx={{ fontSize: "14px", color: "#667085", mb: 1.5 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      color: "#667085",
+                      mb: 1.5,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     {displayed.email}
                   </Typography>
 
@@ -283,14 +290,23 @@ const DetailRow = ({ label, value }) => (
     sx={{
       display: "flex",
       justifyContent: "space-between",
+      alignItems: "flex-start",
       gap: 2,
       borderBottom: "1px solid #EDF1F4",
       pb: 1.2,
     }}
   >
-    <Typography sx={{ fontSize: "13px", color: "#667085" }}>{label}</Typography>
+    <Typography sx={{ fontSize: "13px", color: "#667085", flexShrink: 0 }}>{label}</Typography>
     <Typography
-      sx={{ fontSize: "13px", fontWeight: 700, color: "#17233C", textAlign: "right" }}
+      sx={{
+        minWidth: 0,
+        fontSize: "13px",
+        fontWeight: 700,
+        color: "#17233C",
+        textAlign: "right",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+      }}
     >
       {value}
     </Typography>

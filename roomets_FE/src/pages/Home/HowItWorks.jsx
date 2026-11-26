@@ -85,12 +85,14 @@ const HowItWorks = () => {
               fontFamily:
                 "Georgia, 'Times New Roman', serif",
               fontSize: {
-                xs: "40px",
+                xs: "34px",
+                sm: "44px",
                 md: "56px",
               },
               lineHeight: 1.05,
               fontWeight: 700,
               color: "#12294C",
+              overflowWrap: "break-word",
               mb: 2,
             }}
           >

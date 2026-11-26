@@ -243,7 +243,11 @@ const RoomDetail = () => {
                 backgroundColor: "#FFFFFF",
               }}
             >
-              <RoomImage src={mainImage} alt={room.title} height={390} />
+              <RoomImage
+                src={mainImage}
+                alt={room.title}
+                height={{ xs: 260, sm: 320, md: 390 }}
+              />
 
               {images.length > 1 && (
                 <Box
@@ -252,6 +256,7 @@ const RoomDetail = () => {
                     gap: 1,
                     p: 1.5,
                     overflowX: "auto",
+                    WebkitOverflowScrolling: "touch",
                   }}
                 >
                   {images.map((image, index) => (

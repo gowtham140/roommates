@@ -8,6 +8,7 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -124,6 +125,10 @@ public class EmailOtpServiceImp implements EmailOtpService {
             otpAttemptService.delete(record.getId());
             rateLimiter.refund(normalized);
             log.warn("Failed to send verification email to {}", normalized, ex);
+            if (ex instanceof MailAuthenticationException) {
+                throw new BadRequestException(
+                        "Email service credentials are invalid. Please contact support");
+            }
             throw new BadRequestException("Unable to send the verification email right now");
         }
         return null;

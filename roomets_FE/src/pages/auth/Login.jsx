@@ -217,8 +217,10 @@ const Login = () => {
           <Box
             sx={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "center",
               justifyContent: "space-between",
+              gap: 1,
               mb: 1.8,
             }}
           >

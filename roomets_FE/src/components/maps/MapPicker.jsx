@@ -177,7 +177,14 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
           </Alert>
         )}
 
-        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr auto auto" },
+            gap: 1,
+            mb: 2,
+          }}
+        >
           <TextField
             fullWidth
             size="small"
@@ -193,7 +200,12 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
             startIcon={<SearchRounded />}
             onClick={handleSearch}
             disabled={working || !mapNode}
-            sx={{ textTransform: "none", fontWeight: 700, whiteSpace: "nowrap" }}
+            sx={{
+              width: { xs: "100%", sm: "auto" },
+              textTransform: "none",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
           >
             Search
           </Button>
@@ -202,7 +214,12 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
             startIcon={<MyLocationRounded />}
             onClick={handleUseMyLocation}
             disabled={working || !mapNode}
-            sx={{ textTransform: "none", fontWeight: 700, whiteSpace: "nowrap" }}
+            sx={{
+              width: { xs: "100%", sm: "auto" },
+              textTransform: "none",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
           >
             My location
           </Button>
@@ -211,7 +228,7 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
         <Box
           ref={setMapNode}
           sx={{
-            height: 360,
+            height: { xs: 280, sm: 360 },
             borderRadius: "14px",
             backgroundColor: "#E8EEF4",
             overflow: "hidden",

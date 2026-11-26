@@ -23,9 +23,9 @@ Edit `roommates_BE/src/main/resources/application.properties` before starting an
 | --- | --- |
 | `JWT_SECRET` | JWT signing secret; use at least 32 random bytes |
 | `spring.datasource.*` | JDBC connection set directly in `application.properties`; Compose overrides only `DB_URL` for the container host |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME` | SMTP settings for OTP/password-reset mail |
-| `MAIL_PASSWORD` | SMTP credential; leave blank to disable outgoing mail locally |
-| `MAIL_APP_PASSWORD` | Optional alias for `MAIL_PASSWORD` |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME` | SMTP settings for OTP/password-reset mail; `MAIL_USERNAME` must match the Gmail account that generated the app password |
+| `MAIL_PASSWORD` | Gmail app password; whitespace is stripped automatically; leave blank to disable outgoing mail locally |
+| `MAIL_APP_PASSWORD` | Alias for `MAIL_PASSWORD`; set either one in deployment |
 | `MAIL_FROM` | From address used for outgoing mail |
 | `APP_MAIL_DEV_CONSOLE_OTP` | Local fallback when SMTP is blank; logs and returns the OTP, forced off in `prod` via profile config |
 | `FRONTEND_URL` | Public frontend origin used in generated mail links |
