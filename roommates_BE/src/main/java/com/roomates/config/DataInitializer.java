@@ -19,7 +19,7 @@ import com.roomates.repository.UserRepository;
 import com.roomates.security.UserTypes;
 
 @Component
-@Profile("dev")
+@Profile({ "dev", "local" })
 public class DataInitializer implements CommandLineRunner {
 
     private static final String DEMO_EMAIL = "demo@roommates.local";

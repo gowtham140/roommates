@@ -1,5 +1,4 @@
-const runtimeConfig = typeof window !== "undefined" ? window.__APP_CONFIG__ || {} : {};
-const raw = runtimeConfig.API_URL || import.meta.env.VITE_API_URL || "http://localhost:8080/";
+const raw = import.meta.env.VITE_API_URL || "http://localhost:8080/";
 
 export const API_URL = raw.replace(/\/+$/, "") + "/";
 export const API_ORIGIN = raw.replace(/\/+$/, "");

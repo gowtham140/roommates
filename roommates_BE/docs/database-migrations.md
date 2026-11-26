@@ -17,13 +17,13 @@ For a database that already has a Hibernate-generated schema:
 
 For an empty database, `V1__baseline.sql` creates the schema and Flyway marks it as a normal migration.
 
-## Required environment variables
+## Required application.properties values
 
-- `JWT_SECRET` (at least 256 bits)
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_URL` (optional; defaults to local MySQL)
-- `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM` (required to send email)
-- `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD` (optional, `prod` only, first admin only)
+- `jwt.secret` (at least 256 bits)
+- `spring.datasource.username`
+- `spring.datasource.password`
+- `spring.datasource.url` (defaults to local MySQL)
+- `spring.mail.username`, `spring.mail.password`, `app.mail.from` (required to send email)
+- `app.admin.bootstrap.email`, `app.admin.bootstrap.password` (optional, `prod` only, first admin only)
 
-Seed demo/admin accounts are only created when the `dev` profile is active. In `prod`, the bootstrap admin is created only when both admin variables are set and the email does not already exist.
+Seed demo/admin accounts are only created when the `local` profile is active. In `prod`, the bootstrap admin is created only when both admin values are set and the email does not already exist.

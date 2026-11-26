@@ -2,7 +2,6 @@ package com.roomates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -52,18 +51,24 @@ class TokenUtilTest {
     }
 
     @Test
-    void missingSecretFailsWithClearMessage() {
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> new TokenUtil("", 3600000L));
+    void missingSecretUsesFallback() {
+        TokenUtil fallbackUtil = new TokenUtil("", 3600000L);
+        com.roomates.model.User user = new com.roomates.model.User();
+        user.setId(1);
+        user.setMailID("fallback@example.com");
+        user.setUserType("3");
 
-        assertTrue(error.getMessage().contains("JWT_SECRET is required"));
+        assertTrue(fallbackUtil.validateToken(fallbackUtil.generateToken(user)));
     }
 
     @Test
-    void shortSecretFailsWithClearMessage() {
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> new TokenUtil("too-short", 3600000L));
+    void shortSecretIsStretched() {
+        TokenUtil shortUtil = new TokenUtil("too-short", 3600000L);
+        com.roomates.model.User user = new com.roomates.model.User();
+        user.setId(1);
+        user.setMailID("short@example.com");
+        user.setUserType("3");
 
-        assertTrue(error.getMessage().contains("at least 32 bytes"));
+        assertTrue(shortUtil.validateToken(shortUtil.generateToken(user)));
     }
 }

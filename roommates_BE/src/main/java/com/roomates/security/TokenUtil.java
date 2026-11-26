@@ -1,6 +1,8 @@
 package com.roomates.security;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +23,8 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class TokenUtil {
 
+    private static final String DEFAULT_SECRET = "local-development-only-jwt-secret-change-me-1234567890";
+
     private final SecretKey signingKey;
     private final long validityMs;
 
@@ -28,12 +32,14 @@ public class TokenUtil {
             @Value("${jwt.secret:}") String secret,
             @Value("${jwt.expiration-ms:86400000}") long validityMs) {
 
-        if (secret == null || secret.isBlank()) {
-            throw new IllegalStateException("JWT_SECRET is required. Set it to a random secret of at least 32 bytes.");
-        }
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        String effectiveSecret = secret == null || secret.isBlank() ? DEFAULT_SECRET : secret;
+        byte[] keyBytes = effectiveSecret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
-            throw new IllegalStateException("JWT_SECRET must be at least 32 bytes (256 bits).");
+            try {
+                keyBytes = MessageDigest.getInstance("SHA-256").digest(keyBytes);
+            } catch (NoSuchAlgorithmException ex) {
+                throw new IllegalStateException("SHA-256 is unavailable", ex);
+            }
         }
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.validityMs = validityMs;

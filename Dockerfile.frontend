@@ -8,12 +8,7 @@ RUN VITE_API_URL="$VITE_API_URL" npm run build
 
 FROM nginx:alpine
 COPY nginx.conf /etc/nginx/templates/default.conf.template
-COPY frontend-entrypoint.sh /entrypoint.sh
 COPY --from=build /build/dist /usr/share/nginx/html
-RUN chmod +x /entrypoint.sh
-ENV PUBLIC_API_URL=/ \
-    BACKEND_URL=http://backend:8080 \
+ENV BACKEND_URL=http://backend:8080 \
     NGINX_ENVSUBST_FILTER=BACKEND_URL
 EXPOSE 80
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
