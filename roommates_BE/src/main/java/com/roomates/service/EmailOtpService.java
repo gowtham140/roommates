@@ -5,7 +5,7 @@ public interface EmailOtpService {
     String PURPOSE_REGISTER = "REGISTER";
     String PURPOSE_RESET_PASSWORD = "RESET_PASSWORD";
 
-    void sendOtp(String email, String purpose);
+    String sendOtp(String email, String purpose);
 
     void verifyOtp(String email, String otp, String purpose);
 }

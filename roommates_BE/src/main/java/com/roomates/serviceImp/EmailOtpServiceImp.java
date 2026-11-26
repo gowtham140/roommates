@@ -40,6 +40,7 @@ public class EmailOtpServiceImp implements EmailOtpService {
     private final String mailUsername;
     private final String mailPassword;
     private final long expirationMs;
+    private final boolean devConsoleOtp;
 
     public EmailOtpServiceImp(JavaMailSender mailSender,
             EmailOtpRepository otpRepository,
@@ -50,7 +51,8 @@ public class EmailOtpServiceImp implements EmailOtpService {
             @Value("${app.mail.from:}") String fromAddress,
             @Value("${spring.mail.username:}") String mailUsername,
             @Value("${spring.mail.password:}") String mailPassword,
-            @Value("${app.otp.expiration-ms:600000}") long expirationMs) {
+            @Value("${app.otp.expiration-ms:600000}") long expirationMs,
+            @Value("${app.mail.dev-console-otp:false}") boolean devConsoleOtp) {
 
         this.mailSender = mailSender;
         this.otpRepository = otpRepository;
@@ -62,14 +64,18 @@ public class EmailOtpServiceImp implements EmailOtpService {
         this.mailUsername = mailUsername;
         this.mailPassword = mailPassword;
         this.expirationMs = expirationMs;
+        this.devConsoleOtp = devConsoleOtp;
     }
 
     @Override
     @Transactional
-    public void sendOtp(String email, String purpose) {
+    public String sendOtp(String email, String purpose) {
         String normalized = normalize(email);
         requireSupportedPurpose(purpose);
-        requireMailConfiguration();
+        boolean mailConfigured = StringUtils.hasText(mailUsername) && StringUtils.hasText(mailPassword);
+        if (!mailConfigured && !devConsoleOtp) {
+            throw new BadRequestException("Email service is not configured yet. Please contact support");
+        }
 
         User user = userRepository.findByMailID(normalized);
         if (PURPOSE_REGISTER.equals(purpose)) {
@@ -93,6 +99,11 @@ public class EmailOtpServiceImp implements EmailOtpService {
         otpRepository.save(record);
         otpRepository.deleteByExpiresAtBefore(LocalDateTime.now());
 
+        if (!mailConfigured) {
+            log.warn("Mail is not configured; OTP delivery is using the console for {}. Code: {}", normalized, otp);
+            return otp;
+        }
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(StringUtils.hasText(fromAddress) ? fromAddress : mailUsername);
         message.setTo(normalized);
@@ -115,6 +126,7 @@ public class EmailOtpServiceImp implements EmailOtpService {
             log.warn("Failed to send verification email to {}", normalized, ex);
             throw new BadRequestException("Unable to send the verification email right now");
         }
+        return null;
     }
 
     @Override
@@ -142,12 +154,6 @@ public class EmailOtpServiceImp implements EmailOtpService {
         }
 
         otpAttemptService.delete(record.getId());
-    }
-
-    private void requireMailConfiguration() {
-        if (!StringUtils.hasText(mailUsername) || !StringUtils.hasText(mailPassword)) {
-            throw new BadRequestException("Email service is not configured yet. Please contact support");
-        }
     }
 
     private void requireSupportedPurpose(String purpose) {

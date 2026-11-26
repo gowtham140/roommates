@@ -2,9 +2,6 @@ package com.roomates.serviceImp;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,10 +14,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.roomates.exception.BadRequestException;
+import com.roomates.exception.ResourceNotFoundException;
 import com.roomates.service.FileStorageService;
+
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 public class FileStorageServiceImp implements FileStorageService {
@@ -30,11 +38,18 @@ public class FileStorageServiceImp implements FileStorageService {
     private static final Pattern ROOM_IMAGE_URL = Pattern.compile("^/uploads/rooms/([A-Za-z0-9._-]+)$");
     private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
     private static final int MAX_FILES = 8;
+    private static final String KEY_PREFIX = "rooms/";
+    private static final String URL_PREFIX = "/uploads/rooms/";
 
-    private final String uploadDir;
+    private final S3Client s3Client;
+    private final String bucket;
 
-    public FileStorageServiceImp(@Value("${room.upload.dir}") String uploadDir) {
-        this.uploadDir = uploadDir;
+    public FileStorageServiceImp(S3Client s3Client, @Value("${storage.s3.bucket}") String bucket) {
+        if (!StringUtils.hasText(bucket)) {
+            throw new IllegalStateException("STORAGE_BUCKET is required");
+        }
+        this.s3Client = s3Client;
+        this.bucket = bucket;
     }
 
     @Override
@@ -51,39 +66,123 @@ public class FileStorageServiceImp implements FileStorageService {
             validated.add(validate(file));
         }
 
-        Path targetDir = Paths.get(uploadDir, "rooms").toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(targetDir);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Could not create upload directory", ex);
-        }
-
         List<String> urls = new ArrayList<>();
-        List<Path> written = new ArrayList<>();
+        List<String> writtenKeys = new ArrayList<>();
         try {
             for (ValidatedImage image : validated) {
+                byte[] bytes = readAllBytes(image.file());
                 String filename = UUID.randomUUID().toString() + "." + image.extension();
-                Path destination = targetDir.resolve(filename);
-                try (InputStream inputStream = image.file().getInputStream()) {
-                    Files.copy(inputStream, destination);
-                }
-                written.add(destination);
-                urls.add("/uploads/rooms/" + filename);
+                String key = KEY_PREFIX + filename;
+                s3Client.putObject(
+                        PutObjectRequest.builder()
+                                .bucket(bucket)
+                                .key(key)
+                                .contentType(contentType(image.imageType()))
+                                .build(),
+                        RequestBody.fromBytes(bytes));
+                writtenKeys.add(key);
+                urls.add(URL_PREFIX + filename);
             }
             return urls;
-        } catch (IOException | RuntimeException ex) {
-            for (Path path : written) {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException cleanupFailure) {
-                    log.warn("Could not clean up uploaded image {}", path, cleanupFailure);
-                }
-            }
-            if (ex instanceof RuntimeException runtimeException) {
-                throw runtimeException;
-            }
+        } catch (RuntimeException ex) {
+            deleteUploadedKeys(writtenKeys);
+            throw ex;
+        } catch (IOException ex) {
+            deleteUploadedKeys(writtenKeys);
             throw new IllegalStateException("Failed to store uploaded image", ex);
         }
+    }
+
+    @Override
+    public StoredObject read(String url) {
+        String key = requireKey(url);
+        try (ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(
+                GetObjectRequest.builder().bucket(bucket).key(key).build())) {
+            String contentType = StringUtils.hasText(stream.response().contentType())
+                    ? stream.response().contentType()
+                    : contentTypeFromKey(key);
+            return new StoredObject(stream.readAllBytes(), contentType);
+        } catch (NoSuchKeyException ex) {
+            throw new ResourceNotFoundException("Image not found");
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not read uploaded image", ex);
+        }
+    }
+
+    @Override
+    public void delete(String url) {
+        String key = findKey(url);
+        if (key == null) {
+            return;
+        }
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+        } catch (RuntimeException ex) {
+            log.warn("Could not delete uploaded image {}", key, ex);
+            throw new IllegalStateException("Could not delete uploaded image", ex);
+        }
+    }
+
+    private void deleteUploadedKeys(List<String> keys) {
+        for (String key : keys) {
+            try {
+                s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+            } catch (RuntimeException ex) {
+                log.warn("Could not clean up uploaded object {}", key, ex);
+            }
+        }
+    }
+
+    private String findKey(String url) {
+        if (url == null) {
+            return null;
+        }
+        Matcher matcher = ROOM_IMAGE_URL.matcher(url.trim());
+        if (!matcher.matches()) {
+            return null;
+        }
+        String filename = matcher.group(1);
+        if (filename.contains("..")) {
+            return null;
+        }
+        return KEY_PREFIX + filename;
+    }
+
+    private String requireKey(String url) {
+        String key = findKey(url);
+        if (key == null) {
+            throw new ResourceNotFoundException("Image not found");
+        }
+        return key;
+    }
+
+    private byte[] readAllBytes(MultipartFile file) throws IOException {
+        try (InputStream inputStream = file.getInputStream()) {
+            return inputStream.readAllBytes();
+        }
+    }
+
+    private String contentTypeFromKey(String key) {
+        String filename = key.substring(KEY_PREFIX.length());
+        int dotIndex = filename.lastIndexOf('.');
+        String extension = dotIndex < 0 ? "" : filename.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
+        return switch (extension) {
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "gif" -> "image/gif";
+            case "webp" -> "image/webp";
+            default -> "application/octet-stream";
+        };
+    }
+
+    private String contentType(String imageType) {
+        return switch (imageType) {
+            case "png" -> "image/png";
+            case "jpg" -> "image/jpeg";
+            case "gif" -> "image/gif";
+            case "webp" -> "image/webp";
+            default -> "application/octet-stream";
+        };
     }
 
     private ValidatedImage validate(MultipartFile file) {
@@ -165,40 +264,9 @@ public class FileStorageServiceImp implements FileStorageService {
 
     private void requireMatchingContentType(String contentType, String imageType) {
         String normalized = contentType.split(";", 2)[0].trim().toLowerCase(Locale.ROOT);
-        String expected = switch (imageType) {
-            case "png" -> "image/png";
-            case "jpg" -> "image/jpeg";
-            case "gif" -> "image/gif";
-            case "webp" -> "image/webp";
-            default -> "";
-        };
+        String expected = contentType(imageType);
         if (!expected.equals(normalized)) {
             throw new BadRequestException("Image content type does not match the file content");
-        }
-    }
-
-    @Override
-    public void delete(String url) {
-        if (url == null) {
-            return;
-        }
-
-        Matcher matcher = ROOM_IMAGE_URL.matcher(url.trim());
-        if (!matcher.matches()) {
-            return;
-        }
-
-        Path targetDir = Paths.get(uploadDir, "rooms").toAbsolutePath().normalize();
-        Path file = targetDir.resolve(matcher.group(1)).normalize();
-        if (!targetDir.equals(file.getParent())) {
-            return;
-        }
-
-        try {
-            Files.deleteIfExists(file);
-        } catch (IOException ex) {
-            log.warn("Could not delete uploaded image {}", file, ex);
-            throw new IllegalStateException("Could not delete uploaded image", ex);
         }
     }
 

@@ -1,80 +1,90 @@
 package com.roomates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.roomates.exception.BadRequestException;
+import com.roomates.exception.ResourceNotFoundException;
 import com.roomates.serviceImp.FileStorageServiceImp;
 
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+@ExtendWith(MockitoExtension.class)
 class FileStorageServiceImpTest {
 
-    @TempDir
-    Path uploadDir;
+    @Mock
+    private S3Client s3Client;
 
-    @Test
-    void deleteRemovesUploadedImageFromAssets() throws Exception {
-        Path roomDir = Files.createDirectories(uploadDir.resolve("rooms"));
-        Path image = Files.createFile(roomDir.resolve("a.png"));
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
+    private FileStorageServiceImp service;
 
-        service.delete("/uploads/rooms/a.png");
-
-        assertFalse(Files.exists(image));
+    @BeforeEach
+    void setUp() {
+        service = new FileStorageServiceImp(s3Client, "test-bucket");
     }
 
     @Test
-    void deleteIgnoresPathsOutsideRoomAssets() throws Exception {
-        Path image = Files.createFile(uploadDir.resolve("secret.png"));
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
+    void deleteRemovesUploadedImageFromBucket() {
+        service.delete("/uploads/rooms/a.png");
 
+        ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(captor.capture());
+        assertEquals("test-bucket", captor.getValue().bucket());
+        assertEquals("rooms/a.png", captor.getValue().key());
+    }
+
+    @Test
+    void deleteIgnoresPathsOutsideRoomAssets() {
         service.delete("/uploads/rooms/..");
 
-        assertTrue(Files.exists(image));
+        verifyNoInteractions(s3Client);
     }
 
     @Test
     void storeRejectsFilesWithoutImageMagicBytes() {
         MockMultipartFile file = new MockMultipartFile("files", "fake.png", "image/png",
                 "not really a png".getBytes());
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
 
         assertThrows(BadRequestException.class, () -> service.store(List.of(file)));
+        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
     }
 
     @Test
-    void storeValidatesEveryFileBeforeWritingAnything() throws Exception {
-        Path roomDir = Files.createDirectories(uploadDir.resolve("rooms"));
+    void storeValidatesEveryFileBeforeWritingAnything() {
         MockMultipartFile valid = new MockMultipartFile("files", "a.png", "image/png", pngBytes());
         MockMultipartFile invalid = new MockMultipartFile("files", "b.png", "image/png", "bad".getBytes());
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
 
         assertThrows(BadRequestException.class, () -> service.store(List.of(valid, invalid)));
-        try (Stream<Path> files = Files.list(roomDir)) {
-            assertEquals(0L, files.count());
-        }
+        verifyNoInteractions(s3Client);
     }
 
     @Test
-    void storeCleansUpFilesWrittenBeforeAFailure() throws Exception {
-        Path roomDir = Files.createDirectories(uploadDir.resolve("rooms"));
+    void storeCleansUpObjectsWrittenBeforeAFailure() throws Exception {
         MockMultipartFile valid = new MockMultipartFile("files", "a.png", "image/png", pngBytes());
-
         MultipartFile failing = mock(MultipartFile.class);
         when(failing.isEmpty()).thenReturn(false);
         when(failing.getSize()).thenReturn(12L);
@@ -84,24 +94,36 @@ class FileStorageServiceImpTest {
                 .thenReturn(new ByteArrayInputStream(pngBytes()))
                 .thenThrow(new IOException("cannot read on write"));
 
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
-
         assertThrows(IllegalStateException.class, () -> service.store(List.of(valid, failing)));
-        try (Stream<Path> files = Files.list(roomDir)) {
-            assertEquals(0L, files.count());
-        }
+
+        verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(captor.capture());
+        assertTrue(captor.getValue().key().startsWith("rooms/"));
     }
 
     @Test
     void storeAcceptsFileWithMatchingImageMagicBytes() {
         MockMultipartFile file = new MockMultipartFile("files", "a.png", "image/png", pngBytes());
-        FileStorageServiceImp service = new FileStorageServiceImp(uploadDir.toString());
 
         List<String> urls = service.store(List.of(file));
 
         assertEquals(1, urls.size());
         assertTrue(urls.get(0).startsWith("/uploads/rooms/"));
-        assertTrue(Files.exists(uploadDir.resolve("rooms").resolve(urls.get(0).substring("/uploads/rooms/".length()))));
+        ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
+        assertEquals("test-bucket", captor.getValue().bucket());
+        assertTrue(captor.getValue().key().startsWith("rooms/"));
+        assertTrue(captor.getValue().key().endsWith(".png"));
+        assertEquals("image/png", captor.getValue().contentType());
+    }
+
+    @Test
+    void readMissingObjectThrowsNotFound() {
+        when(s3Client.getObject(any(GetObjectRequest.class)))
+                .thenThrow(NoSuchKeyException.builder().message("missing").build());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.read("/uploads/rooms/missing.png"));
     }
 
     private byte[] pngBytes() {

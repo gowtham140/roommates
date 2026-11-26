@@ -46,9 +46,8 @@ public class AuthController {
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<ApiResponse<Void>> sendOtp(@Valid @RequestBody OtpRequest request) {
-        emailOtpService.sendOtp(request.getEmail(), request.getPurpose());
-        return ResponseEntity.ok(ApiResponse.ok("Verification code sent", null));
+    public ResponseEntity<ApiResponse<String>> sendOtp(@Valid @RequestBody OtpRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Verification code sent", emailOtpService.sendOtp(request.getEmail(), request.getPurpose())));
     }
 
     @PostMapping("/forgot-password")

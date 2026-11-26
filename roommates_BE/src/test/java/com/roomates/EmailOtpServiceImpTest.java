@@ -58,7 +58,7 @@ class EmailOtpServiceImpTest {
     @BeforeEach
     void setUp() {
         service = new EmailOtpServiceImp(mailSender, otpRepository, userRepository, passwordEncoder,
-                new OtpRateLimiter(), otpAttemptService, "", "account@gmail.com", "app-password", 600000L);
+                new OtpRateLimiter(), otpAttemptService, "", "account@gmail.com", "app-password", 600000L, false);
     }
 
     @Test
@@ -143,7 +143,7 @@ class EmailOtpServiceImpTest {
     void sendOtpIsRateLimitedPerEmail() {
         Clock fixedClock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
         EmailOtpServiceImp limited = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
-                passwordEncoder, new OtpRateLimiter(fixedClock), otpAttemptService, "", "account@gmail.com", "app-password", 600000L);
+                passwordEncoder, new OtpRateLimiter(fixedClock), otpAttemptService, "", "account@gmail.com", "app-password", 600000L, false);
         when(userRepository.findByMailID("user@example.com")).thenReturn(null);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed-otp");
 
@@ -161,10 +161,26 @@ class EmailOtpServiceImpTest {
     @Test
     void sendOtpRequiresMailCredentials() {
         EmailOtpServiceImp unconfigured = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
-                passwordEncoder, new OtpRateLimiter(), otpAttemptService, "", "", "", 600000L);
+                passwordEncoder, new OtpRateLimiter(), otpAttemptService, "", "", "", 600000L, false);
 
         assertThrows(BadRequestException.class,
                 () -> unconfigured.sendOtp("user@example.com", EmailOtpService.PURPOSE_REGISTER));
         verify(otpRepository, org.mockito.Mockito.never()).save(any(EmailOtp.class));
+    }
+
+    @Test
+    void sendOtpUsesConsoleFallbackWhenMailIsUnconfigured() {
+        EmailOtpServiceImp console = new EmailOtpServiceImp(mailSender, otpRepository, userRepository,
+                passwordEncoder, new OtpRateLimiter(), otpAttemptService, "", "", "", 600000L, true);
+        when(userRepository.findByMailID("user@example.com")).thenReturn(null);
+        when(otpRepository.findByEmailAndPurpose("user@example.com", EmailOtpService.PURPOSE_REGISTER))
+                .thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed-otp");
+
+        String otp = console.sendOtp("user@example.com", EmailOtpService.PURPOSE_REGISTER);
+
+        assertTrue(otp.matches("\\d{6}"));
+        verify(otpRepository).save(any(EmailOtp.class));
+        verify(mailSender, org.mockito.Mockito.never()).send(any(SimpleMailMessage.class));
     }
 }

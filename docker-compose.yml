@@ -5,8 +5,8 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_DATABASE: roommates_db
-      MYSQL_USER: ${DB_USERNAME:-roommates}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me}
+      MYSQL_USER: roommates
+      MYSQL_PASSWORD: change-me
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-too}
     volumes:
       - mysql_data:/var/lib/mysql
@@ -23,13 +23,12 @@ services:
     env_file: .env
     environment:
       DB_URL: "jdbc:mysql://mysql:3306/roommates_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
-      ROOM_UPLOAD_DIR: /var/lib/roommates/uploads
+      DB_USERNAME: roommates
+      DB_PASSWORD: change-me
       SERVER_PORT: 8080
       MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD:-${MAIL_PASSWORD:-}}
     ports:
       - "8080:8080"
-    volumes:
-      - uploads:/var/lib/roommates/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -47,6 +46,7 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-/}
     environment:
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-/}
       BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
       NGINX_ENVSUBST_FILTER: BACKEND_URL
     ports:
@@ -57,4 +57,3 @@ services:
 
 volumes:
   mysql_data:
-  uploads:
