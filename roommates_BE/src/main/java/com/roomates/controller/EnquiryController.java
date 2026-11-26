@@ -49,6 +49,11 @@ public class EnquiryController {
         return ResponseEntity.ok(ApiResponse.ok(enquiryService.received(principal.getUserId())));
     }
 
+    @GetMapping("/api/enquiries/count")
+    public ResponseEntity<ApiResponse<Long>> countNew(@AuthenticationPrincipal AuthUser principal) {
+        return ResponseEntity.ok(ApiResponse.ok(enquiryService.countNewReceived(principal.getUserId())));
+    }
+
     @PatchMapping("/api/enquiries/{id}/status")
     public ResponseEntity<ApiResponse<Void>> updateStatus(
             @PathVariable Integer id,

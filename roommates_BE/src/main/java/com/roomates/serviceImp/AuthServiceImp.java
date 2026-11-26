@@ -18,11 +18,13 @@ import com.roomates.repository.UserRepository;
 import com.roomates.security.TokenUtil;
 import com.roomates.security.UserTypes;
 import com.roomates.service.AuthService;
+import com.roomates.service.EmailOtpService;
 import com.roomates.webModel.ApiResponse;
 import com.roomates.webModel.AuthResponse;
 import com.roomates.webModel.LoginRequest;
 import com.roomates.webModel.ProfileRequest;
 import com.roomates.webModel.RegisterRequest;
+import com.roomates.webModel.ResetPasswordRequest;
 import com.roomates.webModel.UserDto;
 
 @Service
@@ -32,15 +34,18 @@ public class AuthServiceImp implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final TokenUtil tokenUtil;
+    private final EmailOtpService emailOtpService;
 
     public AuthServiceImp(UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
-            TokenUtil tokenUtil) {
+            TokenUtil tokenUtil,
+            EmailOtpService emailOtpService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenUtil = tokenUtil;
+        this.emailOtpService = emailOtpService;
     }
 
     @Override
@@ -56,6 +61,8 @@ public class AuthServiceImp implements AuthService {
         if (!UserTypes.OWNER.equals(userType) && !UserTypes.SEEKER.equals(userType)) {
             throw new BadRequestException("Please select a valid account type");
         }
+
+        emailOtpService.verifyOtp(email, request.getOtp(), EmailOtpService.PURPOSE_REGISTER);
 
         User user = new User();
         user.setName(request.getName().trim());
@@ -97,6 +104,30 @@ public class AuthServiceImp implements AuthService {
         AuthResponse response = new AuthResponse(
                 token, "Bearer", tokenUtil.getValidityMs() / 1000, toDto(user));
         return ApiResponse.ok("Signed in successfully", response);
+    }
+
+    @Override
+    public ApiResponse<Void> forgotPassword(String email) {
+        emailOtpService.sendOtp(email, EmailOtpService.PURPOSE_RESET_PASSWORD);
+        return ApiResponse.ok("Verification code sent to your email", null);
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
+        String email = normalize(request.getEmail());
+        emailOtpService.verifyOtp(email, request.getOtp(), EmailOtpService.PURPOSE_RESET_PASSWORD);
+
+        User user = userRepository.findByMailID(email);
+        if (user == null || Boolean.TRUE.equals(user.getIsDelete())) {
+            throw new BadRequestException("Account not found");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setCpassword(request.getNewPassword());
+        user.setUpdatedDate(new Date());
+        userRepository.save(user);
+        return ApiResponse.ok("Password reset successfully", null);
     }
 
     @Override

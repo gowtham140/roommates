@@ -17,6 +17,7 @@ import {
   ArrowBackRounded,
   CalendarTodayOutlined,
   LocationOnOutlined,
+  LockRounded,
   PersonOutlineRounded,
   SendRounded,
 } from "@mui/icons-material";
@@ -26,6 +27,7 @@ import MapView from "../../components/maps/MapView";
 import useUserLocation from "../../hooks/useUserLocation";
 import { distanceKm, formatDistance } from "../../utils/geo";
 import { useAuth } from "../../context/authContext";
+import { isOwner as isOwnerRole, isSeeker } from "../../utils/userTypes";
 import { RoomImage } from "./FindRooms";
 
 const RoomDetail = () => {
@@ -193,9 +195,13 @@ const RoomDetail = () => {
   const mainImage =
     selectedImage && images.includes(selectedImage) ? selectedImage : images[0];
   const amenities = Array.isArray(room.amenities) ? room.amenities : [];
-  const isOwner = Boolean(
-    user && room.ownerId != null && String(user.id) === String(room.ownerId)
+  const isListingOwner = Boolean(
+    user &&
+      isOwnerRole(user) &&
+      room.ownerId != null &&
+      String(user.id) === String(room.ownerId)
   );
+  const canEnquire = isSeeker(user);
 
   return (
     <Box
@@ -330,16 +336,79 @@ const RoomDetail = () => {
 
               {room.latitude != null && room.longitude != null && (
                 <Box sx={{ mb: 2 }}>
-                  <MapView
-                    latitude={room.latitude}
-                    longitude={room.longitude}
-                    label={room.title}
-                    userPosition={userPosition}
-                  />
-                  {userPosition && (
-                    <Typography sx={{ fontSize: 13, color: "#0F9D8A", fontWeight: 700, mt: 1 }}>
-                      {formatDistance(distanceKm(userPosition, room))} from you
-                    </Typography>
+                  {user ? (
+                    <>
+                      <MapView
+                        latitude={room.latitude}
+                        longitude={room.longitude}
+                        label={room.title}
+                        userPosition={userPosition}
+                      />
+                      {userPosition && (
+                        <Typography sx={{ fontSize: 13, color: "#0F9D8A", fontWeight: 700, mt: 1 }}>
+                          {formatDistance(distanceKm(userPosition, room))} from you
+                        </Typography>
+                      )}
+                    </>
+                  ) : (
+                    <Box sx={{ position: "relative", borderRadius: "14px", overflow: "hidden" }}>
+                      <Box
+                        aria-hidden="true"
+                        sx={{ filter: "blur(7px)", pointerEvents: "none", userSelect: "none" }}
+                      >
+                        <MapView
+                          latitude={room.latitude}
+                          longitude={room.longitude}
+                          label={room.title}
+                        />
+                      </Box>
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 1,
+                          textAlign: "center",
+                          backgroundColor: "rgba(245, 250, 252, 0.35)",
+                          px: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: "12px",
+                            backgroundColor: "#FFFFFF",
+                            color: "#3730E8",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 6px 18px rgba(30, 70, 90, 0.12)",
+                          }}
+                        >
+                          <LockRounded />
+                        </Box>
+                        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#17233C" }}>
+                          Exact location is hidden
+                        </Typography>
+                        <Typography sx={{ fontSize: 12.5, color: "#49657D" }}>
+                          Log in to view the map and distance.
+                        </Typography>
+                        <Button
+                          component={RouterLink}
+                          to="/login"
+                          state={{ from: `/rooms/${id}` }}
+                          variant="contained"
+                          size="small"
+                          sx={{ ...primaryButtonStyles, height: 36, mt: 0.5 }}
+                        >
+                          Log in to view
+                        </Button>
+                      </Box>
+                    </Box>
                   )}
                 </Box>
               )}
@@ -439,7 +508,7 @@ const RoomDetail = () => {
                 </Box>
               </Box>
 
-              {isOwner ? (
+              {isListingOwner ? (
                 <Box sx={{ display: "flex", gap: 1.2, flexWrap: "wrap" }}>
                   <Button
                     component={RouterLink}
@@ -475,6 +544,10 @@ const RoomDetail = () => {
                     Login to enquire
                   </Button>
                 </Box>
+              ) : !canEnquire ? (
+                <Alert severity="info" sx={{ borderRadius: "12px" }}>
+                  Only room seekers can send enquiries. Use My Rooms to manage your listings.
+                </Alert>
               ) : user.seekingClosed ? (
                 <Alert severity="info" sx={{ borderRadius: "12px" }}>
                   Your room seeking is closed. Reopen it from your profile to send new enquiries.

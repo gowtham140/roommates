@@ -15,6 +15,7 @@ import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
 import com.roomates.security.UserTypes;
 import com.roomates.service.EnquiryService;
+import com.roomates.service.NotificationMailService;
 import com.roomates.webModel.EnquiryRequest;
 import com.roomates.webModel.EnquiryResponse;
 
@@ -27,12 +28,14 @@ public class EnquiryServiceImp implements EnquiryService {
     private final EnquiryRepository enquiryRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final NotificationMailService notificationMailService;
 
     public EnquiryServiceImp(EnquiryRepository enquiryRepository, RoomRepository roomRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository, NotificationMailService notificationMailService) {
         this.enquiryRepository = enquiryRepository;
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
+        this.notificationMailService = notificationMailService;
     }
 
     @Override
@@ -69,12 +72,15 @@ public class EnquiryServiceImp implements EnquiryService {
         enquiry.setMessage(message);
         enquiry.setStatus("NEW");
 
-        return toResponse(enquiryRepository.save(enquiry));
+        Enquiry saved = enquiryRepository.save(enquiry);
+        notificationMailService.sendEnquiryNotification(saved);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<EnquiryResponse> sent(Integer seekerId) {
+        requireSeekerById(seekerId);
         return enquiryRepository.findBySeekerIdOrderByCreatedAtDesc(seekerId).stream()
                 .map(this::toResponse)
                 .toList();
@@ -83,9 +89,17 @@ public class EnquiryServiceImp implements EnquiryService {
     @Override
     @Transactional(readOnly = true)
     public List<EnquiryResponse> received(Integer ownerId) {
+        requireRoomManager(ownerId);
         return enquiryRepository.findByRoomOwnerIdOrderByCreatedAtDesc(ownerId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countNewReceived(Integer ownerId) {
+        requireRoomManager(ownerId);
+        return enquiryRepository.countByRoomOwnerIdAndStatus(ownerId, "NEW");
     }
 
     @Override
@@ -113,6 +127,12 @@ public class EnquiryServiceImp implements EnquiryService {
                 userRepository.save(seeker);
             }
         }
+    }
+
+    private void requireSeekerById(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        requireSeeker(user);
     }
 
     private void requireSeeker(User user) {

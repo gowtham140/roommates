@@ -14,6 +14,10 @@ export async function getReceivedEnquiries() {
   return unwrap(await client.get("/api/enquiries/received"));
 }
 
+export async function getNewEnquiryCount() {
+  return unwrap(await client.get("/api/enquiries/count"));
+}
+
 export async function updateEnquiryStatus(id, status) {
   return unwrap(await client.patch(`/api/enquiries/${id}/status`, null, { params: { status } }));
 }

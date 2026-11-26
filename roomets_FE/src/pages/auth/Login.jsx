@@ -6,7 +6,6 @@ import {
   Button,
   Checkbox,
   CircularProgress,
-  Divider,
   FormControlLabel,
   Paper,
   Snackbar,
@@ -321,61 +320,6 @@ const Login = () => {
             Login
           </Button>
         </Box>
-
-        <Divider
-          sx={{
-            my: 2.3,
-            borderColor: "#E0E7EC",
-          }}
-        />
-
-        <Button
-          fullWidth
-          variant="contained"
-          disabled={submitting || !acceptedTerms}
-          onClick={() => performLogin("demo@roommates.local", "demo1234")}
-          sx={{
-            height: 48,
-            borderRadius: "11px",
-            backgroundColor: "#E5F1FF",
-            color: "#293DD6",
-            textTransform: "none",
-            fontSize: "14px",
-            fontWeight: 700,
-            boxShadow: "none",
-            "&:hover": {
-              backgroundColor: "#D8E9FF",
-              boxShadow: "none",
-            },
-          }}
-        >
-          Continue as verified owner (demo)
-        </Button>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          disabled={submitting || !acceptedTerms}
-          onClick={() => performLogin("seeker@roommates.local", "seeker1234")}
-          sx={{
-            height: 48,
-            mt: 1.2,
-            borderRadius: "11px",
-            borderColor: "#BDD3DF",
-            color: "#1D3553",
-            textTransform: "none",
-            fontSize: "14px",
-            fontWeight: 700,
-            boxShadow: "none",
-            "&:hover": {
-              borderColor: "#3730E8",
-              backgroundColor: "#F8F9FF",
-              boxShadow: "none",
-            },
-          }}
-        >
-          Continue as verified seeker (demo)
-        </Button>
 
         <Box
           sx={{

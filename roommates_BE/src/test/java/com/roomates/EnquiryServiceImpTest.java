@@ -3,6 +3,7 @@ package com.roomates;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -22,6 +23,8 @@ import com.roomates.model.User;
 import com.roomates.repository.EnquiryRepository;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
+import com.roomates.service.NotificationMailService;
 import com.roomates.serviceImp.EnquiryServiceImp;
 import com.roomates.webModel.EnquiryRequest;
 import com.roomates.webModel.EnquiryResponse;
@@ -38,11 +41,14 @@ class EnquiryServiceImpTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificationMailService notificationMailService;
+
     private EnquiryServiceImp service;
 
     @BeforeEach
     void setUp() {
-        service = new EnquiryServiceImp(enquiryRepository, roomRepository, userRepository);
+        service = new EnquiryServiceImp(enquiryRepository, roomRepository, userRepository, notificationMailService);
     }
 
     @Test
@@ -125,6 +131,38 @@ class EnquiryServiceImpTest {
         assertEquals("NEW", response.getStatus());
         assertEquals("9000000001", response.getOwnerPhone());
         assertEquals("Nice room", response.getRoomTitle());
+        verify(notificationMailService).sendEnquiryNotification(any(Enquiry.class));
+    }
+
+    @Test
+    void countNewReceivedUsesRepository() {
+        User owner = new User();
+        owner.setId(7);
+        owner.setUserType(UserTypes.OWNER);
+        when(userRepository.findById(7)).thenReturn(Optional.of(owner));
+        when(enquiryRepository.countByRoomOwnerIdAndStatus(7, "NEW")).thenReturn(3L);
+
+        assertEquals(3L, service.countNewReceived(7));
+    }
+
+    @Test
+    void sentEnquiriesRejectOwner() {
+        User owner = new User();
+        owner.setId(7);
+        owner.setUserType(UserTypes.OWNER);
+        when(userRepository.findById(7)).thenReturn(Optional.of(owner));
+
+        assertThrows(BadRequestException.class, () -> service.sent(7));
+    }
+
+    @Test
+    void receivedEnquiriesRejectSeeker() {
+        User seeker = new User();
+        seeker.setId(8);
+        seeker.setUserType(UserTypes.SEEKER);
+        when(userRepository.findById(8)).thenReturn(Optional.of(seeker));
+
+        assertThrows(BadRequestException.class, () -> service.received(8));
     }
 
     @Test

@@ -10,7 +10,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +25,9 @@ import com.roomates.service.FileStorageService;
 @Service
 public class FileStorageServiceImp implements FileStorageService {
 
+    private static final Logger log = LoggerFactory.getLogger(FileStorageServiceImp.class);
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final Pattern ROOM_IMAGE_URL = Pattern.compile("^/uploads/rooms/([A-Za-z0-9._-]+)$");
     private static final long MAX_FILE_SIZE = 5L * 1024 * 1024;
     private static final int MAX_FILES = 8;
 
@@ -81,5 +87,30 @@ public class FileStorageServiceImp implements FileStorageService {
             urls.add("/uploads/rooms/" + filename);
         }
         return urls;
+    }
+
+    @Override
+    public void delete(String url) {
+        if (url == null) {
+            return;
+        }
+
+        Matcher matcher = ROOM_IMAGE_URL.matcher(url.trim());
+        if (!matcher.matches()) {
+            return;
+        }
+
+        Path targetDir = Paths.get(uploadDir, "rooms").toAbsolutePath().normalize();
+        Path file = targetDir.resolve(matcher.group(1)).normalize();
+        if (!targetDir.equals(file.getParent())) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException ex) {
+            log.warn("Could not delete uploaded image {}", file, ex);
+            throw new IllegalStateException("Could not delete uploaded image", ex);
+        }
     }
 }

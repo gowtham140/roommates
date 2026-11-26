@@ -13,4 +13,6 @@ public interface EnquiryRepository extends JpaRepository<Enquiry, Integer> {
     List<Enquiry> findByRoomOwnerIdOrderByCreatedAtDesc(Integer ownerId);
 
     boolean existsByRoomIdAndSeekerIdAndStatusIn(Integer roomId, Integer seekerId, List<String> statuses);
+
+    long countByRoomOwnerIdAndStatus(Integer ownerId, String status);
 }

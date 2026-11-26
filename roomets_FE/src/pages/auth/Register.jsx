@@ -18,7 +18,7 @@ import {
   Link,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
-import { register } from "../../API/authAPI";
+import { register, sendOtp } from "../../API/authAPI";
 import { USER_TYPES } from "../../utils/userTypes";
 
 const Register = () => {
@@ -39,6 +39,9 @@ const Register = () => {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -53,7 +56,34 @@ const Register = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
 
+    if (name === "email" && otpSent) {
+      setOtpSent(false);
+      setOtp("");
+    }
+
     setError("");
+  };
+
+  const requestOtp = async (email, resend = false) => {
+    setSendingOtp(true);
+    setError("");
+    try {
+      await sendOtp({ email: email.trim(), purpose: "REGISTER" });
+      setOtpSent(true);
+      setSnackbar({
+        open: true,
+        message: resend
+          ? "A new verification code has been sent."
+          : "Verification code sent to your email.",
+        severity: "success",
+      });
+    } catch (err) {
+      const message = err?.message || "Unable to send the verification code.";
+      setError(message);
+      setSnackbar({ open: true, message, severity: "error" });
+    } finally {
+      setSendingOtp(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -95,6 +125,16 @@ const Register = () => {
       return;
     }
 
+    if (!otpSent) {
+      await requestOtp(email);
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setError("Enter the 6-digit code sent to your email.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -104,6 +144,7 @@ const Register = () => {
         email,
         phone: mobile,
         password,
+        otp: otp.trim(),
         gender,
         userType,
         workingDetails: formData.workingDetails.trim(),
@@ -112,7 +153,7 @@ const Register = () => {
 
       setSnackbar({
         open: true,
-        message: "Account created. Please log in.",
+        message: "Email verified. Account created. Please log in.",
         severity: "success",
       });
 
@@ -396,6 +437,34 @@ const Register = () => {
               />
             </Grid>
 
+            {otpSent && (
+              <Grid size={12}>
+                <Alert severity="info" sx={{ borderRadius: "10px", fontSize: "13px", mb: 1.5 }}>
+                  Enter the 6-digit code sent to {formData.email.trim()}.
+                </Alert>
+                <FormField
+                  label="Email verification code"
+                  name="otp"
+                  value={otp}
+                  onChange={(event) => {
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6));
+                    setError("");
+                  }}
+                  placeholder="123456"
+                  inputProps={{ inputMode: "numeric", maxLength: 6 }}
+                />
+                <Button
+                  type="button"
+                  size="small"
+                  disabled={sendingOtp}
+                  onClick={() => requestOtp(formData.email, true)}
+                  sx={{ mt: 1, textTransform: "none", fontWeight: 700, color: "#3730E8" }}
+                >
+                  Resend code
+                </Button>
+              </Grid>
+            )}
+
             {error && (
               <Grid size={12}>
                 <Alert
@@ -415,9 +484,11 @@ const Register = () => {
                 fullWidth
                 variant="contained"
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || sendingOtp}
                 startIcon={
-                  submitting ? <CircularProgress size={18} color="inherit" /> : null
+                  submitting || sendingOtp ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : null
                 }
                 sx={{
                   height: 49,
@@ -434,7 +505,7 @@ const Register = () => {
                   },
                 }}
               >
-                Create account
+                {otpSent ? "Verify & create account" : "Send verification code"}
               </Button>
             </Grid>
           </Grid>

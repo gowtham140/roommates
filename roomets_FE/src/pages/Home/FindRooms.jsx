@@ -28,7 +28,11 @@ import {
   SearchOffRounded,
 } from "@mui/icons-material";
 import RoomFilters from "../../components/rooms/RoomFilters";
-import { ROOM_FILTER_KEYS, createRoomFilterValues } from "../../components/rooms/roomFilterUtils";
+import {
+  ROOM_FILTER_KEYS,
+  createRoomFilterValues,
+  toRoomFilterQuery,
+} from "../../components/rooms/roomFilterUtils";
 import { getRooms } from "../../API/roomsAPI";
 import { resolveImageUrl } from "../../API/app-config";
 import { useAuth } from "../../context/authContext";
@@ -44,11 +48,14 @@ const FindRooms = () => {
   const { position: userPosition, error: locationError, refresh: refreshLocation } = useUserLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const filters = useMemo(
+  const appliedFilters = useMemo(
     () => createRoomFilterValues(Object.fromEntries(searchParams)),
     [searchParams]
   );
-  const { sort } = filters;
+  const { sort } = appliedFilters;
+  const [draftFilters, setDraftFilters] = useState(
+    () => createRoomFilterValues(Object.fromEntries(searchParams))
+  );
   const [page, setPage] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [rooms, setRooms] = useState([]);
@@ -67,13 +74,21 @@ const FindRooms = () => {
     queueMicrotask(() => setSavedRooms(getSavedRoomIds(userId)));
   }, [user?.id]);
 
+  useEffect(() => {
+    const nextFilters = createRoomFilterValues(Object.fromEntries(searchParams));
+    queueMicrotask(() => setDraftFilters(nextFilters));
+  }, [searchParams]);
+
+  const loadSequence = useRef(0);
+
   const loadRooms = useCallback(() => {
-    let active = true;
+    const sequence = loadSequence.current + 1;
+    loadSequence.current = sequence;
 
     const params = { page, size: PAGE_SIZE };
 
     ROOM_FILTER_KEYS.forEach((key) => {
-      const value = filters[key];
+      const value = appliedFilters[key];
       if (value !== "" && value != null) {
         params[key] = value;
       }
@@ -86,50 +101,48 @@ const FindRooms = () => {
         ? "rent,desc"
         : "createdAt,desc";
 
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setError("");
+    setLoading(true);
+    setError("");
 
-      getRooms(params)
-        .then((result) => {
-          if (!active) return;
-          setRooms(Array.isArray(result?.content) ? result.content : []);
-          setTotalElements(result?.totalElements ?? 0);
-          setTotalPages(result?.totalPages ?? 0);
-        })
-        .catch((err) => {
-          if (active) {
-            setRooms([]);
-            setError(err?.message || "Unable to load rooms. Please try again.");
-          }
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-    }, 250);
+    getRooms(params)
+      .then((result) => {
+        if (sequence !== loadSequence.current) return;
+        setRooms(Array.isArray(result?.content) ? result.content : []);
+        setTotalElements(result?.totalElements ?? 0);
+        setTotalPages(result?.totalPages ?? 0);
+      })
+      .catch((err) => {
+        if (sequence !== loadSequence.current) return;
+        setRooms([]);
+        setError(err?.message || "Unable to load rooms. Please try again.");
+      })
+      .finally(() => {
+        if (sequence === loadSequence.current) setLoading(false);
+      });
+  }, [appliedFilters, sort, page]);
 
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [filters, sort, page]);
-
-  useEffect(() => loadRooms(), [loadRooms, reloadKey]);
+  useEffect(() => {
+    queueMicrotask(loadRooms);
+  }, [loadRooms, reloadKey]);
 
   const updateFilter = (name, value) => {
-    const next = new URLSearchParams(searchParams);
-    if (value === "" || value == null) {
-      next.delete(name);
-    } else {
-      next.set(name, value);
-    }
-    setSearchParams(next, { replace: true });
+    setDraftFilters((current) => ({ ...current, [name]: value }));
+  };
+
+  const submitFilters = () => {
+    const nextQuery = toRoomFilterQuery(draftFilters);
+    const changed = nextQuery.toString() !== searchParams.toString();
+
     setPage(0);
+    if (changed) {
+      setSearchParams(nextQuery, { replace: true });
+    } else {
+      setReloadKey((key) => key + 1);
+    }
   };
 
   const clearFilters = () => {
-    setSearchParams(new URLSearchParams(), { replace: true });
-    setPage(0);
+    setDraftFilters(createRoomFilterValues());
   };
 
   const toggleSave = (roomId) => {
@@ -185,13 +198,10 @@ const FindRooms = () => {
           }}
         >
           <RoomFilters
-            values={filters}
+            values={draftFilters}
             onChange={updateFilter}
             onClear={clearFilters}
-            onSubmit={() => {
-              setPage(0);
-              setReloadKey((key) => key + 1);
-            }}
+            onSubmit={submitFilters}
           />
         </Paper>
 
@@ -333,7 +343,7 @@ const FindRooms = () => {
                   <RoomCard
                     room={room}
                     userPosition={userPosition}
-                    saved={savedRooms.includes(room.id)}
+                    saved={savedRooms.includes(String(room.id))}
                     onSave={() => toggleSave(room.id)}
                     onView={() => navigate(`/rooms/${room.id}`)}
                   />

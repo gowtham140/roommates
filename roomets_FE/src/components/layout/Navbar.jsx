@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AppBar,
   Avatar,
+  Badge,
   Box,
   Button,
   Chip,
@@ -30,6 +31,7 @@ import {
   LogoutRounded,
   MailOutlineRounded,
   Menu as MenuIcon,
+  NotificationsNoneRounded,
   PersonOutlineRounded,
   SearchRounded,
   ShieldOutlined,
@@ -37,6 +39,7 @@ import {
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import { getNewEnquiryCount } from "../../API/enquiriesAPI";
 import { canManageRooms, isAdmin, isSeeker } from "../../utils/userTypes";
 
 const primaryItems = [
@@ -78,26 +81,51 @@ const Navbar = () => {
   const location = useLocation();
   const [accountAnchor, setAccountAnchor] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [enquiryCount, setEnquiryCount] = useState(0);
 
-  const visiblePrimaryItems = useMemo(
-    () => (seekingClosed ? primaryItems.filter((item) => item.path !== "/rooms") : primaryItems),
-    [seekingClosed]
-  );
+  const enquiryBadgeCount = owner ? enquiryCount : 0;
+
+  useEffect(() => {
+    if (!user?.id || !owner) {
+      return undefined;
+    }
+    let active = true;
+    const loadCount = () => {
+      getNewEnquiryCount()
+        .then((count) => {
+          if (active) setEnquiryCount(Number(count) || 0);
+        })
+        .catch(() => {
+          if (active) setEnquiryCount(0);
+        });
+    };
+    loadCount();
+    const timer = setInterval(loadCount, 60000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [user?.id, owner, location.pathname]);
+
+  const visiblePrimaryItems = useMemo(() => {
+    if (owner) return primaryItems.filter((item) => item.path !== "/rooms");
+    if (seekingClosed) return primaryItems.filter((item) => item.path !== "/rooms");
+    return primaryItems;
+  }, [owner, seekingClosed]);
 
   const accountItems = useMemo(() => {
     const items = [{ label: "My Profile", path: "/profile", icon: <PersonOutlineRounded fontSize="small" /> }];
     if (owner) {
       items.push(
         { label: "My Rooms", path: "/my-rooms", icon: <SpaceDashboardOutlined fontSize="small" /> },
-        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> },
+        { label: "Enquiry Requests", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> },
         { label: "Post a Room", path: "/post-room", icon: <AddHomeWorkOutlined fontSize="small" /> }
       );
     }
     if (seeker) {
       items.push(
-        { label: "My Applications", path: "/my-applications", icon: <MailOutlineRounded fontSize="small" /> },
-        { label: "Liked Rooms", path: "/liked-rooms", icon: <FavoriteBorderRounded fontSize="small" /> },
-        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> }
+        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> },
+        { label: "Liked Rooms", path: "/liked-rooms", icon: <FavoriteBorderRounded fontSize="small" /> }
       );
     }
     if (admin) items.push({ label: "Admin Dashboard", path: "/admin", icon: <AdminPanelSettingsOutlined fontSize="small" /> });
@@ -164,6 +192,17 @@ const Navbar = () => {
                   >
                     {owner ? "Post a room" : "Find rooms"}
                   </Button>
+                )}
+                {owner && (
+                  <IconButton
+                    onClick={() => goTo("/enquiries")}
+                    aria-label={`${enquiryBadgeCount} new enquiry requests`}
+                    sx={{ color: "#475467", border: "1px solid #D7DFEA", borderRadius: "11px", width: 40, height: 40 }}
+                  >
+                    <Badge badgeContent={enquiryBadgeCount} color="error" max={99}>
+                      <NotificationsNoneRounded fontSize="small" />
+                    </Badge>
+                  </IconButton>
                 )}
                 <Button
                   onClick={(e) => setAccountAnchor(e.currentTarget)}

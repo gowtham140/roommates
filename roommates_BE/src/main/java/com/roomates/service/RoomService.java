@@ -22,4 +22,6 @@ public interface RoomService {
     RoomResponse update(Integer ownerId, Integer id, RoomRequest request);
 
     void delete(Integer ownerId, Integer id);
+
+    RoomResponse deleteImage(Integer ownerId, Integer id, String imageUrl);
 }

@@ -11,8 +11,6 @@ import {
   Container,
   Paper,
   Snackbar,
-  Tab,
-  Tabs,
   Typography,
 } from "@mui/material";
 import MailOutlineRounded from "@mui/icons-material/MailOutlineRounded";
@@ -22,6 +20,7 @@ import {
   updateEnquiryStatus,
 } from "../../API/enquiriesAPI";
 import { useAuth } from "../../context/authContext";
+import { canManageRooms } from "../../utils/userTypes";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -36,8 +35,8 @@ const formatDate = (value) => {
 
 const MyEnquiries = () => {
   const { user, loading: authLoading } = useAuth();
+  const ownerView = canManageRooms(user);
 
-  const [tab, setTab] = useState(0);
   const [sent, setSent] = useState([]);
   const [received, setReceived] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,13 +49,19 @@ const MyEnquiries = () => {
   });
 
   const loadEnquiries = useCallback(() => {
-    let active = true;
+    if (!user) return undefined;
 
-    Promise.all([getSentEnquiries(), getReceivedEnquiries()])
-      .then(([sentData, receivedData]) => {
+    let active = true;
+    const request = ownerView ? getReceivedEnquiries() : getSentEnquiries();
+
+    request
+      .then((data) => {
         if (!active) return;
-        setSent(Array.isArray(sentData) ? sentData : []);
-        setReceived(Array.isArray(receivedData) ? receivedData : []);
+        if (ownerView) {
+          setReceived(Array.isArray(data) ? data : []);
+        } else {
+          setSent(Array.isArray(data) ? data : []);
+        }
       })
       .catch((err) => {
         if (active) {
@@ -70,7 +75,7 @@ const MyEnquiries = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [user, ownerView]);
 
   useEffect(() => loadEnquiries(), [loadEnquiries]);
 
@@ -106,7 +111,7 @@ const MyEnquiries = () => {
     return <Navigate to="/login" replace state={{ from: "/enquiries" }} />;
   }
 
-  const items = tab === 0 ? sent : received;
+  const items = ownerView ? received : sent;
 
   return (
     <Box
@@ -121,7 +126,7 @@ const MyEnquiries = () => {
           <Typography
             sx={{ color: "#0F9D8A", fontSize: "14px", fontWeight: 700, mb: 0.8 }}
           >
-            Your conversations
+            {ownerView ? "Room management" : "Your enquiries"}
           </Typography>
           <Typography
             component="h1"
@@ -132,10 +137,12 @@ const MyEnquiries = () => {
               mb: 1,
             }}
           >
-            My enquiries
+            {ownerView ? "Enquiry requests" : "My enquiries"}
           </Typography>
           <Typography sx={{ fontSize: "15px", color: "#667085" }}>
-            Track rooms you asked about and messages from interested roommates.
+            {ownerView
+              ? "Review enquiries from seekers and manage their status."
+              : "Track the rooms you have enquired about."}
           </Typography>
         </Box>
 
@@ -148,26 +155,25 @@ const MyEnquiries = () => {
             overflow: "hidden",
           }}
         >
-          <Tabs
-            value={tab}
-            onChange={(_, value) => setTab(value)}
+          <Box
             sx={{
-              px: { xs: 1, sm: 2 },
+              px: { xs: 2, sm: 3 },
+              py: 1.5,
               borderBottom: "1px solid #EDF1F4",
-              "& .MuiTab-root": {
-                textTransform: "none",
-                fontWeight: 700,
-                fontSize: "14px",
-                color: "#667085",
-                minHeight: 56,
-              },
-              "& .Mui-selected": { color: "#3730E8" },
-              "& .MuiTabs-indicator": { backgroundColor: "#3730E8" },
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
             }}
           >
-            <Tab label={`Sent (${sent.length})`} />
-            <Tab label={`Received (${received.length})`} />
-          </Tabs>
+            <Typography sx={{ fontWeight: 700, fontSize: 15, color: "#17233C" }}>
+              {ownerView ? "Received requests" : "Sent enquiries"}
+            </Typography>
+            <Chip
+              size="small"
+              label={items.length}
+              sx={{ backgroundColor: "#EEF4FF", color: "#304A73", fontWeight: 700 }}
+            />
+          </Box>
 
           <Box sx={{ p: { xs: 2, sm: 3 } }}>
             {loading ? (
@@ -208,14 +214,14 @@ const MyEnquiries = () => {
                 <Typography
                   sx={{ fontSize: "18px", fontWeight: 700, color: "#17233C", mb: 0.8 }}
                 >
-                  {tab === 0 ? "No sent enquiries" : "No received enquiries"}
+                  {ownerView ? "No enquiry requests yet" : "No enquiries yet"}
                 </Typography>
                 <Typography sx={{ fontSize: "14px", color: "#667085", mb: 2 }}>
-                  {tab === 0
-                    ? "Browse rooms and send an enquiry to get started."
-                    : "Enquiries from roommates will appear here."}
+                  {ownerView
+                    ? "Enquiries from seekers will appear here."
+                    : "Browse rooms and send an enquiry to get started."}
                 </Typography>
-                {tab === 0 && (
+                {!ownerView && (
                   <Button
                     component={RouterLink}
                     to="/rooms"
@@ -232,7 +238,7 @@ const MyEnquiries = () => {
                   <EnquiryCard
                     key={enquiry.id}
                     enquiry={enquiry}
-                    received={tab === 1}
+                    received={ownerView}
                     busy={busyId === enquiry.id}
                     onStatus={handleStatus}
                   />

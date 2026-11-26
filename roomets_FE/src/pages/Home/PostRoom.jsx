@@ -15,18 +15,22 @@ import {
   FormGroup,
   FormHelperText,
   Grid,
+  IconButton,
   MenuItem,
   Paper,
   Snackbar,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import CloudUploadOutlined from "@mui/icons-material/CloudUploadOutlined";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import PlaceRounded from "@mui/icons-material/PlaceRounded";
-import { createRoom, getRoom, updateRoom, uploadImages } from "../../API/roomsAPI";
+import { createRoom, deleteRoomImage, getRoom, updateRoom, uploadImages } from "../../API/roomsAPI";
 import { resolveImageUrl } from "../../API/app-config";
 import MapPicker from "../../components/maps/MapPicker";
 import { useAuth } from "../../context/authContext";
+import { canManageRooms } from "../../utils/userTypes";
 
 const AMENITIES = [
   "WiFi",
@@ -101,6 +105,7 @@ const PostRoom = () => {
   });
 
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [deletingImage, setDeletingImage] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [pickedLocation, setPickedLocation] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
@@ -175,17 +180,48 @@ const PostRoom = () => {
     );
   };
 
+  const handleRemoveExistingImage = async (url) => {
+    if (!editId || deletingImage) return;
+
+    setDeletingImage(url);
+    try {
+      const updated = await deleteRoomImage(editId, url);
+      setEditingRoom((prev) => ({
+        ...prev,
+        imageUrls: Array.isArray(updated?.imageUrls) ? updated.imageUrls : [],
+      }));
+      setSnackbar({
+        open: true,
+        message: "Photo removed.",
+        severity: "success",
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err?.message || "Unable to remove this photo.",
+        severity: "error",
+      });
+    } finally {
+      setDeletingImage(null);
+    }
+  };
+
+  const handleRemoveSelectedFile = (preview) => {
+    setSelectedFiles((prev) => prev.filter((item) => item.preview !== preview));
+    URL.revokeObjectURL(preview);
+  };
+
   const onSubmit = async (values) => {
     setSubmitting(true);
 
     try {
-      let imageUrls = Array.isArray(editingRoom?.imageUrls)
+      const existingUrls = Array.isArray(editingRoom?.imageUrls)
         ? [...editingRoom.imageUrls]
         : [];
-
-      if (selectedFiles.length > 0) {
-        imageUrls = await uploadImages(selectedFiles.map((item) => item.file));
-      }
+      const uploadedUrls = selectedFiles.length > 0
+        ? await uploadImages(selectedFiles.map((item) => item.file))
+        : [];
+      const imageUrls = [...existingUrls, ...uploadedUrls];
 
       const payload = {
         title: values.title.trim(),
@@ -227,10 +263,10 @@ const PostRoom = () => {
     }
   };
 
-  if (!authLoading && !user) {
+  if (!authLoading && (!user || !canManageRooms(user))) {
     return (
       <Navigate
-        to="/login"
+        to={user ? "/rooms" : "/login"}
         replace
         state={{ from: location.pathname + location.search }}
       />
@@ -575,39 +611,95 @@ const PostRoom = () => {
                 onChange={handleFiles}
               />
             </Button>
+            {editId && (
+              <Typography sx={{ fontSize: 12, color: "#667085", mt: 0.8 }}>
+                Saved photos are kept unless you remove them. Use the X on a photo to delete it.
+              </Typography>
+            )}
 
             {(selectedFiles.length > 0 ||
               (editingRoom?.imageUrls || []).length > 0) && (
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 2 }}>
                 {(editingRoom?.imageUrls || []).map((url, index) => (
                   <Box
-                    component="img"
                     key={`${url}-${index}`}
-                    src={resolveImageUrl(url)}
-                    alt={`Existing room ${index + 1}`}
-                    sx={{
-                      width: 110,
-                      height: 84,
-                      objectFit: "cover",
-                      borderRadius: "10px",
-                      border: "1px solid #D7E5EB",
-                    }}
-                  />
+                    sx={{ position: "relative", width: 110, height: 84 }}
+                  >
+                    <Box
+                      component="img"
+                      src={resolveImageUrl(url)}
+                      alt={`Existing room ${index + 1}`}
+                      sx={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: "10px",
+                        border: "1px solid #D7E5EB",
+                      }}
+                    />
+                    <Tooltip title="Remove photo">
+                      <IconButton
+                        size="small"
+                        aria-label={`Remove saved photo ${index + 1}`}
+                        disabled={Boolean(deletingImage)}
+                        onClick={() => handleRemoveExistingImage(url)}
+                        sx={{
+                          position: "absolute",
+                          top: 2,
+                          right: 2,
+                          width: 24,
+                          height: 24,
+                          backgroundColor: "rgba(255,255,255,0.92)",
+                          color: "#B42318",
+                          "&:hover": { backgroundColor: "#FFFFFF", color: "#B42318" },
+                        }}
+                      >
+                        {deletingImage === url ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 ))}
                 {selectedFiles.map((item) => (
                   <Box
-                    component="img"
                     key={item.preview}
-                    src={item.preview}
-                    alt={item.file.name}
-                    sx={{
-                      width: 110,
-                      height: 84,
-                      objectFit: "cover",
-                      borderRadius: "10px",
-                      border: "1px solid #0F9D8A",
-                    }}
-                  />
+                    sx={{ position: "relative", width: 110, height: 84 }}
+                  >
+                    <Box
+                      component="img"
+                      src={item.preview}
+                      alt={item.file.name}
+                      sx={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: "10px",
+                        border: "1px solid #0F9D8A",
+                      }}
+                    />
+                    <Tooltip title="Remove selected photo">
+                      <IconButton
+                        size="small"
+                        aria-label={`Remove ${item.file.name}`}
+                        onClick={() => handleRemoveSelectedFile(item.preview)}
+                        sx={{
+                          position: "absolute",
+                          top: 2,
+                          right: 2,
+                          width: 24,
+                          height: 24,
+                          backgroundColor: "rgba(255,255,255,0.92)",
+                          color: "#B42318",
+                          "&:hover": { backgroundColor: "#FFFFFF", color: "#B42318" },
+                        }}
+                      >
+                        <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 ))}
               </Box>
             )}

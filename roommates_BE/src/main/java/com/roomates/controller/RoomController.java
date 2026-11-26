@@ -87,4 +87,14 @@ public class RoomController {
         roomService.delete(principal.getUserId(), id);
         return ResponseEntity.ok(ApiResponse.ok("Room deleted", null));
     }
+
+    @DeleteMapping("/{id}/images")
+    public ResponseEntity<ApiResponse<RoomResponse>> deleteImage(
+            @PathVariable Integer id,
+            @RequestParam("imageUrl") String imageUrl,
+            @AuthenticationPrincipal AuthUser principal) {
+
+        return ResponseEntity.ok(ApiResponse.ok("Photo removed",
+                roomService.deleteImage(principal.getUserId(), id, imageUrl)));
+    }
 }

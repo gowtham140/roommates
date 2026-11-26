@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -23,11 +24,13 @@ import com.roomates.exception.BadRequestException;
 import com.roomates.model.User;
 import com.roomates.repository.UserRepository;
 import com.roomates.security.TokenUtil;
+import com.roomates.service.EmailOtpService;
 import com.roomates.serviceImp.AuthServiceImp;
 import com.roomates.webModel.ApiResponse;
 import com.roomates.webModel.AuthResponse;
 import com.roomates.webModel.LoginRequest;
 import com.roomates.webModel.RegisterRequest;
+import com.roomates.webModel.ResetPasswordRequest;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceImpTest {
@@ -45,13 +48,17 @@ class AuthServiceImpTest {
     private TokenUtil tokenUtil;
 
     @Mock
+    private EmailOtpService emailOtpService;
+
+    @Mock
     private Authentication authentication;
 
     private AuthServiceImp service;
 
     @BeforeEach
     void setUp() {
-        service = new AuthServiceImp(userRepository, passwordEncoder, authenticationManager, tokenUtil);
+        service = new AuthServiceImp(userRepository, passwordEncoder, authenticationManager, tokenUtil,
+                emailOtpService);
     }
 
     @Test
@@ -61,6 +68,7 @@ class AuthServiceImpTest {
         request.setEmail(" TEST@Example.COM ");
         request.setPhone("9876543210");
         request.setPassword("secret123");
+        request.setOtp("123456");
         request.setGender("FEMALE");
         request.setUserType("3");
 
@@ -80,6 +88,7 @@ class AuthServiceImpTest {
         assertEquals("Test User", saved.getName());
         assertEquals("9876543210", saved.getPhone_no());
         assertEquals("3", saved.getUserType());
+        verify(emailOtpService).verifyOtp("test@example.com", "123456", EmailOtpService.PURPOSE_REGISTER);
     }
 
     @Test
@@ -136,5 +145,43 @@ class AuthServiceImpTest {
         assertEquals("jwt-token", result.getData().getToken());
         assertEquals(7, result.getData().getUser().getId());
         assertEquals("test@example.com", result.getData().getUser().getEmail());
+    }
+
+    @Test
+    void resetPasswordUpdatesHashConsumesOtpAndReturnsSuccess() {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail(" TEST@Example.com ");
+        request.setOtp("654321");
+        request.setNewPassword("newSecret");
+
+        User user = new User();
+        user.setMailID("test@example.com");
+        user.setPassword("oldHash");
+
+        when(userRepository.findByMailID("test@example.com")).thenReturn(user);
+        when(passwordEncoder.encode("newSecret")).thenReturn("newHash");
+
+        ApiResponse<Void> result = service.resetPassword(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("newHash", user.getPassword());
+        assertEquals("newSecret", user.getCpassword());
+        verify(emailOtpService).verifyOtp("test@example.com", "654321", EmailOtpService.PURPOSE_RESET_PASSWORD);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void resetPasswordStopsWhenOtpIsInvalid() {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setEmail("test@example.com");
+        request.setOtp("000000");
+        request.setNewPassword("newSecret");
+
+        org.mockito.Mockito.doThrow(new BadRequestException("Incorrect verification code"))
+                .when(emailOtpService)
+                .verifyOtp("test@example.com", "000000", EmailOtpService.PURPOSE_RESET_PASSWORD);
+
+        assertThrows(BadRequestException.class, () -> service.resetPassword(request));
+        verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
     }
 }

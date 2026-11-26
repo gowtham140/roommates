@@ -21,6 +21,7 @@ import com.roomates.model.User;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
 import com.roomates.security.UserTypes;
+import com.roomates.service.FileStorageService;
 import com.roomates.service.RoomService;
 import com.roomates.webModel.RoomRequest;
 import com.roomates.webModel.RoomResponse;
@@ -33,10 +34,13 @@ public class RoomServiceImp implements RoomService {
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
-    public RoomServiceImp(RoomRepository roomRepository, UserRepository userRepository) {
+    public RoomServiceImp(RoomRepository roomRepository, UserRepository userRepository,
+            FileStorageService fileStorageService) {
         this.roomRepository = roomRepository;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -104,6 +108,23 @@ public class RoomServiceImp implements RoomService {
         room.setIsDelete(true);
         room.setStatus("INACTIVE");
         roomRepository.save(room);
+    }
+
+    @Override
+    @Transactional
+    public RoomResponse deleteImage(Integer ownerId, Integer id, String imageUrl) {
+        Room room = findOwnedRoom(ownerId, id);
+        requireRoomManager(ownerId);
+        ensureNotAdminBlocked(room);
+
+        String target = imageUrl == null ? "" : imageUrl.trim();
+        if (room.getImageUrls() == null || !room.getImageUrls().remove(target)) {
+            throw new BadRequestException("This photo is not part of the room");
+        }
+
+        RoomResponse response = toResponse(roomRepository.save(room));
+        fileStorageService.delete(target);
+        return response;
     }
 
     private User requireRoomManager(Integer userId) {

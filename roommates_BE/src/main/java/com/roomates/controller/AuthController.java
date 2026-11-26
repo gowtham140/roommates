@@ -11,12 +11,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.roomates.model.AuthUser;
 import com.roomates.service.AuthService;
+import com.roomates.service.EmailOtpService;
 import com.roomates.webModel.ApiResponse;
 import com.roomates.webModel.AuthResponse;
 import com.roomates.webModel.LoginRequest;
+import com.roomates.webModel.OtpRequest;
 import com.roomates.webModel.ProfileRequest;
 import com.roomates.webModel.RegisterRequest;
 import com.roomates.webModel.RequestModel;
+import com.roomates.webModel.ResetPasswordRequest;
 import com.roomates.webModel.UserDto;
 
 import jakarta.validation.Valid;
@@ -26,9 +29,11 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailOtpService emailOtpService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, EmailOtpService emailOtpService) {
         this.authService = authService;
+        this.emailOtpService = emailOtpService;
     }
 
     @PostMapping("/test")
@@ -44,6 +49,22 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<Void>> sendOtp(@Valid @RequestBody OtpRequest request) {
+        emailOtpService.sendOtp(request.getEmail(), request.getPurpose());
+        return ResponseEntity.ok(ApiResponse.ok("Verification code sent", null));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody OtpRequest request) {
+        return ResponseEntity.ok(authService.forgotPassword(request.getEmail()));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 
     @GetMapping("/me")

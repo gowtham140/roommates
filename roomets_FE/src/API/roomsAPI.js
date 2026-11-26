@@ -26,6 +26,12 @@ export async function deleteRoom(id) {
   return unwrap(await client.delete(`/api/rooms/${id}`));
 }
 
+export async function deleteRoomImage(id, imageUrl) {
+  return unwrap(
+    await client.delete(`/api/rooms/${id}/images`, { params: { imageUrl } })
+  );
+}
+
 export async function uploadImages(files) {
   const formData = new FormData();
   Array.from(files || []).forEach((file) => formData.append("files", file));

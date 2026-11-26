@@ -13,5 +13,7 @@ public interface EnquiryService {
 
     List<EnquiryResponse> received(Integer ownerId);
 
+    long countNewReceived(Integer ownerId);
+
     void updateStatus(Integer ownerId, Integer id, String status);
 }

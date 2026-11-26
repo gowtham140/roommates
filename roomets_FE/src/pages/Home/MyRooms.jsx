@@ -21,6 +21,7 @@ import {
 import AddRounded from "@mui/icons-material/AddRounded";
 import { deleteRoom, getMyRooms, updateRoom } from "../../API/roomsAPI";
 import { useAuth } from "../../context/authContext";
+import { canManageRooms } from "../../utils/userTypes";
 import { RoomImage } from "./FindRooms";
 
 const ADMIN_BLOCKED = ["BLOCKED", "BLOCKED_BY_USER"];
@@ -134,8 +135,8 @@ const MyRooms = () => {
     }
   };
 
-  if (!authLoading && !user) {
-    return <Navigate to="/login" replace state={{ from: "/my-rooms" }} />;
+  if (!authLoading && (!user || !canManageRooms(user))) {
+    return <Navigate to={user ? "/rooms" : "/login"} replace state={{ from: "/my-rooms" }} />;
   }
 
   return (
