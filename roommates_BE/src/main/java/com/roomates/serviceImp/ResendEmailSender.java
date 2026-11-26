@@ -7,6 +7,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,10 @@ import com.roomates.service.EmailSender;
 
 @Component
 public class ResendEmailSender implements EmailSender {
+
+    private static final Set<String> FREE_MAIL_DOMAINS = Set.of(
+            "gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com",
+            "yahoo.com", "yahoo.co.in", "icloud.com", "me.com", "aol.com", "proton.me", "protonmail.com");
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -31,7 +37,7 @@ public class ResendEmailSender implements EmailSender {
 
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.apiUrl = StringUtils.hasText(apiUrl) ? apiUrl.trim() : "https://api.resend.com/emails";
-        this.fromAddress = fromAddress == null ? "" : fromAddress.trim();
+        this.fromAddress = normalizeFromAddress(fromAddress);
     }
 
     @Override
@@ -79,6 +85,19 @@ public class ResendEmailSender implements EmailSender {
         } catch (IOException ex) {
             throw new IllegalStateException("Unable to reach Resend API", ex);
         }
+    }
+
+    private String normalizeFromAddress(String fromAddress) {
+        if (!StringUtils.hasText(fromAddress)) {
+            return "";
+        }
+        String value = fromAddress.trim();
+        int open = value.lastIndexOf('<');
+        int close = value.lastIndexOf('>');
+        String address = open >= 0 && close > open ? value.substring(open + 1, close).trim() : value;
+        int at = address.lastIndexOf('@');
+        String domain = at >= 0 ? address.substring(at + 1).toLowerCase(Locale.ROOT) : "";
+        return FREE_MAIL_DOMAINS.contains(domain) ? "onboarding@resend.dev" : value;
     }
 
     private String buildPayload(String to, String subject, String text, String html) {

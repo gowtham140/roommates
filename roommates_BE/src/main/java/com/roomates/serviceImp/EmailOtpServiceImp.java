@@ -107,7 +107,8 @@ public class EmailOtpServiceImp implements EmailOtpService {
 			log.error("OTP email failed for {}", normalized, ex);
 			otpAttemptService.delete(record.getId());
 			rateLimiter.refund(normalized);
-			throw new BadRequestException("Unable to send the verification email right now");
+			String reason = StringUtils.hasText(ex.getMessage()) ? ex.getMessage() : "unknown provider error";
+			throw new BadRequestException("Email delivery failed: " + reason);
 		}
 		return null;
 	}

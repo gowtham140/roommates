@@ -11,7 +11,7 @@ The active profile is controlled in `application.properties`; `local` enables se
 
 ## Production
 
-- All backend config lives in `application.properties`: DB, JWT, mail, S3, CORS, Actuator, and frontend URL. Set `RESEND_API_KEY` in deployment and set `MAIL_FROM` to a sender verified in Resend; `JWT_SECRET` falls back safely instead of failing bean creation.
+- All backend config lives in `application.properties`: DB, JWT, mail, S3, CORS, Actuator, and frontend URL. Set `RESEND_API_KEY` in deployment and set `MAIL_FROM` to a sender on a domain verified in Resend; free-mail `MAIL_FROM` values are replaced with `onboarding@resend.dev`, which can only email the Resend account owner. `JWT_SECRET` falls back safely instead of failing bean creation.
 - Switch `application.properties` to `#spring.profiles.active=prod` / `spring.profiles.active=local` as needed, and replace the commented production `spring.datasource.*` block before deploying. `application-local.properties` and `application-prod.properties` contain only DDL/Flyway settings.
 - Seed data never runs outside `local`/`dev`; set `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` once to create the first admin if none exists. The `prod` profile uses Flyway with `ddl-auto=validate` and `spring.flyway.clean-disabled=true`; it never wipes the production database. Follow `roommates_BE/docs/database-migrations.md` for existing databases.
 - Start with `docker compose up -d --build`. Backend listens on `8080`; nginx serves the frontend on `80`.

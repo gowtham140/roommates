@@ -24,7 +24,7 @@ Edit `roommates_BE/src/main/resources/application.properties` before starting an
 | `JWT_SECRET` | JWT signing secret; use at least 32 random bytes |
 | `spring.datasource.*` | JDBC connection set directly in `application.properties` |
 | `RESEND_API_KEY` | Resend API key for OTP and enquiry notification email; leave blank to disable outgoing mail locally |
-| `MAIL_FROM` | Verified Resend sender address; defaults to `onboarding@resend.dev` for local testing |
+| `MAIL_FROM` | Resend sender address; free-mail addresses are replaced with `onboarding@resend.dev`, and production recipients require a verified domain sender |
 | `APP_MAIL_DEV_CONSOLE_OTP` | Local fallback when Resend is blank; logs and returns the OTP, forced off in `prod` via profile config |
 | `FRONTEND_URL` | Public frontend origin used in generated mail links |
 | `STORAGE_BUCKET`, `STORAGE_ENDPOINT`, `STORAGE_REGION` | S3-compatible bucket, endpoint, and signing region |
