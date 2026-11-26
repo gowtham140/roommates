@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link as RouterLink, Navigate } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -17,9 +17,10 @@ import {
 import FavoriteRounded from "@mui/icons-material/FavoriteRounded";
 import LocationOnOutlined from "@mui/icons-material/LocationOnOutlined";
 import { getRoom } from "../../API/roomsAPI";
-import { resolveImageUrl } from "../../API/app-config";
 import { useAuth } from "../../context/authContext";
-import { getSavedRoomIds, removeSavedRoom } from "../../utils/savedRooms";
+import RoomImage from "../../components/rooms/RoomImage";
+import useLoadEffect from "../../hooks/useLoadEffect";
+import { getSavedRoomIds, pruneSavedRooms, removeSavedRoom } from "../../utils/savedRooms";
 
 const formatRent = (value) => {
   const amount = Number(value);
@@ -28,27 +29,42 @@ const formatRent = (value) => {
 
 const LikedRooms = () => {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
   const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(Boolean(user?.id));
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!user?.id) return undefined;
+  const loadRooms = useCallback(() => {
+    if (authLoading) return undefined;
 
     let active = true;
-    const ids = getSavedRoomIds(user.id);
+    setLoading(true);
+    setError("");
+    const ids = getSavedRoomIds(userId);
 
     Promise.all(
       ids.map(async (id) => {
         try {
-          return await getRoom(id);
-        } catch {
-          return null;
+          return { id, room: await getRoom(id), missing: false };
+        } catch (err) {
+          const status = Number(err?.response?.status ?? err?.status);
+          return { id, room: null, missing: status === 404 };
         }
       })
     )
       .then((results) => {
-        if (active) setRooms(results.filter(Boolean));
+        if (!active) return;
+        const valid = results.map((result) => result.room).filter(Boolean);
+        const transientFailure = results.some((result) => !result.room && !result.missing);
+        if (!transientFailure) {
+          pruneSavedRooms(
+            userId,
+            valid.map((room) => room.id)
+          );
+        } else if (!valid.length) {
+          setError("Some saved rooms could not be loaded. Please try again.");
+        }
+        setRooms(valid);
       })
       .catch((err) => {
         if (active) setError(err?.message || "Unable to load liked rooms.");
@@ -60,16 +76,14 @@ const LikedRooms = () => {
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [userId, authLoading]);
+
+  useLoadEffect(loadRooms);
 
   const handleRemove = (roomId) => {
-    removeSavedRoom(user?.id, roomId);
+    removeSavedRoom(userId, roomId);
     setRooms((current) => current.filter((room) => String(room.id) !== String(roomId)));
   };
-
-  if (!authLoading && !user) {
-    return <Navigate to="/login" replace state={{ from: "/liked-rooms" }} />;
-  }
 
   return (
     <Box sx={{ minHeight: "calc(100vh - 64px)", backgroundColor: "#F5FAFC", py: { xs: 4, md: 5 } }}>
@@ -112,44 +126,47 @@ const LikedRooms = () => {
             </Box>
           ) : (
             <Grid container spacing={2}>
-              {rooms.map((room) => {
-                const image = resolveImageUrl(room.imageUrls?.[0]);
-                return (
-                  <Grid key={room.id} size={{ xs: 12, md: 6 }}>
-                    <Card elevation={0} sx={{ borderRadius: "16px", border: "1px solid #E3EBF0", overflow: "hidden", height: "100%" }}>
-                      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, height: "100%" }}>
-                        <Box
-                          component={image ? "img" : "div"}
-                          src={image || undefined}
-                          alt={room.title || "Room"}
-                          sx={{ width: { xs: "100%", sm: 180 }, height: { xs: 180, sm: "auto" }, minHeight: { sm: 170 }, objectFit: "cover", backgroundColor: "#EAF2F5", flexShrink: 0 }}
-                        />
-                        <CardContent sx={{ flex: 1, p: 2, "&:last-child": { pb: 2 } }}>
-                          <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
-                            <Typography sx={{ fontSize: "17px", fontWeight: 700, color: "#17233C", lineHeight: 1.3 }}>
-                              {room.title || "Room"}
-                            </Typography>
-                            <IconButton aria-label="Remove liked room" onClick={() => handleRemove(room.id)} sx={{ color: "#E53935", mt: -0.5, mr: -1 }}>
-                              <FavoriteRounded fontSize="small" />
-                            </IconButton>
-                          </Box>
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "#667085", mb: 1 }}>
-                            <LocationOnOutlined sx={{ fontSize: 16 }} />
-                            <Typography sx={{ fontSize: "13px" }}>{room.location || "Location not specified"}</Typography>
-                          </Box>
-                          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1.5 }}>
-                            <Chip size="small" label={formatRent(room.rent)} sx={{ backgroundColor: "#EEF4FF", color: "#3730E8", fontWeight: 700 }} />
-                            {room.roomType && <Chip size="small" label={room.roomType} sx={{ backgroundColor: "#F5F7FA" }} />}
-                          </Box>
-                          <Button component={RouterLink} to={`/rooms/${room.id}`} sx={{ textTransform: "none", fontWeight: 700, color: "#3730E8", px: 0 }}>
-                            View details
-                          </Button>
-                        </CardContent>
-                      </Box>
-                    </Card>
-                  </Grid>
-                );
-              })}
+              {rooms.map((room) => (
+                <Grid key={room.id} size={{ xs: 12, md: 6 }}>
+                  <Card elevation={0} sx={{ borderRadius: "16px", border: "1px solid #E3EBF0", overflow: "hidden", height: "100%" }}>
+                    <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, height: "100%" }}>
+                      <RoomImage
+                        src={room.imageUrls?.[0]}
+                        alt={room.title || "Room"}
+                        height={180}
+                        sx={{
+                          width: { xs: "100%", sm: 180 },
+                          height: { xs: 180, sm: "100%" },
+                          minHeight: { sm: 170 },
+                          flexShrink: 0,
+                          backgroundColor: "#EAF2F5",
+                        }}
+                      />
+                      <CardContent sx={{ flex: 1, p: 2, "&:last-child": { pb: 2 } }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, mb: 0.5 }}>
+                          <Typography sx={{ fontSize: "17px", fontWeight: 700, color: "#17233C", lineHeight: 1.3 }}>
+                            {room.title || "Room"}
+                          </Typography>
+                          <IconButton aria-label="Remove liked room" onClick={() => handleRemove(room.id)} sx={{ color: "#E53935", mt: -0.5, mr: -1 }}>
+                            <FavoriteRounded fontSize="small" />
+                          </IconButton>
+                        </Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, color: "#667085", mb: 1 }}>
+                          <LocationOnOutlined sx={{ fontSize: 16 }} />
+                          <Typography sx={{ fontSize: "13px" }}>{room.location || "Location not specified"}</Typography>
+                        </Box>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1.5 }}>
+                          <Chip size="small" label={formatRent(room.rent)} sx={{ backgroundColor: "#EEF4FF", color: "#3730E8", fontWeight: 700 }} />
+                          {room.roomType && <Chip size="small" label={room.roomType} sx={{ backgroundColor: "#F5F7FA" }} />}
+                        </Box>
+                        <Button component={RouterLink} to={`/rooms/${room.id}`} sx={{ textTransform: "none", fontWeight: 700, color: "#3730E8", px: 0 }}>
+                          View details
+                        </Button>
+                      </CardContent>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
             </Grid>
           )}
         </Paper>

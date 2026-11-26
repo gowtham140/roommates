@@ -13,8 +13,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -26,6 +28,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleMissingResource(NoResourceFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Not Found", "Resource not found", request);
     }
 
     @ExceptionHandler(BadRequestException.class)
@@ -41,10 +48,26 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Validation Failed", message, request);
     }
 
-    @ExceptionHandler({ HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
-            MethodArgumentTypeMismatchException.class })
+    @ExceptionHandler({ HttpMessageNotReadableException.class, MissingServletRequestParameterException.class })
     public ResponseEntity<ErrorResponse> handleMalformedRequest(Exception ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Bad Request", "Invalid request payload or parameters", request);
+    }
+
+    @ExceptionHandler({ IllegalArgumentException.class, MethodArgumentTypeMismatchException.class })
+    public ResponseEntity<ErrorResponse> handleInvalidArgument(Exception ex, HttpServletRequest request) {
+        String message = ex.getMessage() == null ? "Invalid request parameter" : ex.getMessage();
+        return build(HttpStatus.BAD_REQUEST, "Bad Request", message, request);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleMethodValidation(HandlerMethodValidationException ex,
+            HttpServletRequest request) {
+        String message = ex.getAllErrors().stream()
+                .map(error -> error.getDefaultMessage())
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.joining(", "));
+        return build(HttpStatus.BAD_REQUEST, "Validation Failed",
+                message.isEmpty() ? "Invalid request parameter" : message, request);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

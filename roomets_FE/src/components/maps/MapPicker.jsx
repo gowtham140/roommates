@@ -21,6 +21,7 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const placeMarkerRef = useRef(null);
+  const reverseTimerRef = useRef(null);
 
   const initialLatitude = initial?.latitude;
   const initialLongitude = initial?.longitude;
@@ -58,23 +59,30 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
 
       const coordinates = { latitude: position.lat, longitude: position.lng };
       setSelected((previous) => ({ location: previous?.location || "", ...coordinates }));
+      if (reverseTimerRef.current) {
+        clearTimeout(reverseTimerRef.current);
+        reverseTimerRef.current = null;
+        setWorking(false);
+      }
       if (!reverse) return;
 
       setWorking(true);
-      try {
-        const address = await reverseGeocodeOsm(position);
-        if (!active) return;
-        setSelected((previous) => ({
-          ...previous,
-          ...coordinates,
-          location:
-            address ||
-            previous?.location ||
-            `Picked location (${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)})`,
-        }));
-      } finally {
-        if (active) setWorking(false);
-      }
+      reverseTimerRef.current = setTimeout(async () => {
+        try {
+          const address = await reverseGeocodeOsm(position);
+          if (!active) return;
+          setSelected((previous) => ({
+            ...previous,
+            ...coordinates,
+            location:
+              address ||
+              previous?.location ||
+              `Picked location (${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)})`,
+          }));
+        } finally {
+          if (active) setWorking(false);
+        }
+      }, 350);
     };
     placeMarkerRef.current = placeMarker;
 
@@ -85,6 +93,7 @@ const MapPicker = ({ open, initial, onClose, onSelect }) => {
 
     return () => {
       active = false;
+      if (reverseTimerRef.current) clearTimeout(reverseTimerRef.current);
       map.off("click", handleMapClick);
       map.remove();
       mapRef.current = null;

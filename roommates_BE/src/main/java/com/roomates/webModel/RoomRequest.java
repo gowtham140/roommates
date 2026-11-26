@@ -5,35 +5,68 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public class RoomRequest implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @NotBlank
+    @Size(max = 120)
     private String title;
 
+    @Size(max = 2000)
     private String description;
 
     @NotBlank
+    @Size(max = 120)
     private String location;
 
     @NotNull
+    @DecimalMin(value = "0.01", message = "Rent must be greater than zero")
+    @DecimalMax(value = "100000000", message = "Rent is too large")
     private BigDecimal rent;
 
+    @DecimalMin(value = "0", message = "Deposit cannot be negative")
+    @DecimalMax(value = "100000000", message = "Deposit is too large")
     private BigDecimal deposit;
+
+    @Pattern(regexp = "^(1RK|1BHK|2BHK|3BHK)$", message = "Invalid room type")
     private String roomType;
+
+    @Pattern(regexp = "^(Single|Double|Triple)$", message = "Invalid sharing type")
     private String sharing;
+
+    @Pattern(regexp = "^(ANY|MALE|FEMALE)$", message = "Invalid gender preference")
     private String gender;
+
     private Boolean food;
+
+    @Size(max = 100)
     private String foodPreference;
+
     private LocalDate availableFrom;
-    private List<String> amenities;
-    private List<String> imageUrls;
+
+    @Size(max = 20)
+    private List<@Size(max = 50) String> amenities;
+
+    @Size(max = 8)
+    private List<@Pattern(regexp = "^/uploads/rooms/[A-Za-z0-9._-]+$") String> imageUrls;
+
+    @Pattern(regexp = "^(ACTIVE|INACTIVE|RENTED|BLOCKED|BLOCKED_BY_USER)$", message = "Invalid room status")
     private String status;
+
+    @DecimalMin("-90")
+    @DecimalMax("90")
     private Double latitude;
+
+    @DecimalMin("-180")
+    @DecimalMax("180")
     private Double longitude;
 
     public RoomRequest() {

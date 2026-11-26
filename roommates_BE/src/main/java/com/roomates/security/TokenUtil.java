@@ -25,10 +25,17 @@ public class TokenUtil {
     private final long validityMs;
 
     public TokenUtil(
-            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.secret:}") String secret,
             @Value("${jwt.expiration-ms:86400000}") long validityMs) {
 
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET is required. Set it to a random secret of at least 32 bytes.");
+        }
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT_SECRET must be at least 32 bytes (256 bits).");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
         this.validityMs = validityMs;
     }
 

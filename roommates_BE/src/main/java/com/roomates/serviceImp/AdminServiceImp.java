@@ -3,6 +3,8 @@ package com.roomates.serviceImp;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import com.roomates.model.Room;
 import com.roomates.model.User;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
 import com.roomates.service.AdminService;
 import com.roomates.webModel.AdminUserResponse;
 import com.roomates.webModel.RoomResponse;
@@ -48,7 +51,7 @@ public class AdminServiceImp implements AdminService {
 
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if ("1".equals(target.getUserType())) {
+        if (UserTypes.ADMIN.equals(target.getUserType())) {
             throw new BadRequestException("Admin accounts cannot be blocked");
         }
 
@@ -75,8 +78,15 @@ public class AdminServiceImp implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public List<RoomResponse> getRooms() {
-        return roomRepository.findAll(Sort.by(Sort.Direction.DESC, "id")).stream()
-                .filter(room -> !Boolean.TRUE.equals(room.getIsDelete()))
+        return getRooms(0, 100);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomResponse> getRooms(int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "id"));
+        return roomRepository.findAllByIsDeleteFalse(pageable).stream()
                 .map(this::toRoomResponse)
                 .toList();
     }

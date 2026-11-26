@@ -13,7 +13,6 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -35,6 +34,8 @@ public class EmailOtpServiceImp implements EmailOtpService {
     private final EmailOtpRepository otpRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OtpRateLimiter rateLimiter;
+    private final OtpAttemptService otpAttemptService;
     private final String fromAddress;
     private final String mailUsername;
     private final String mailPassword;
@@ -44,6 +45,8 @@ public class EmailOtpServiceImp implements EmailOtpService {
             EmailOtpRepository otpRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
+            OtpRateLimiter rateLimiter,
+            OtpAttemptService otpAttemptService,
             @Value("${app.mail.from:}") String fromAddress,
             @Value("${spring.mail.username:}") String mailUsername,
             @Value("${spring.mail.password:}") String mailPassword,
@@ -53,6 +56,8 @@ public class EmailOtpServiceImp implements EmailOtpService {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.rateLimiter = rateLimiter;
+        this.otpAttemptService = otpAttemptService;
         this.fromAddress = fromAddress;
         this.mailUsername = mailUsername;
         this.mailPassword = mailPassword;
@@ -76,6 +81,7 @@ public class EmailOtpServiceImp implements EmailOtpService {
             throw new BadRequestException("Account not found or blocked. Please contact support.");
         }
 
+        rateLimiter.checkAllowed(normalized);
         String otp = generateOtp();
 
         EmailOtp record = otpRepository.findByEmailAndPurpose(normalized, purpose).orElseGet(EmailOtp::new);
@@ -85,7 +91,7 @@ public class EmailOtpServiceImp implements EmailOtpService {
         record.setExpiresAt(LocalDateTime.now().plus(expirationMs, ChronoUnit.MILLIS));
         record.setAttempts(0);
         otpRepository.save(record);
-        otpRepository.deleteByExpiresAtBefore(LocalDateTime.now().minus(expirationMs, ChronoUnit.MILLIS));
+        otpRepository.deleteByExpiresAtBefore(LocalDateTime.now());
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(StringUtils.hasText(fromAddress) ? fromAddress : mailUsername);
@@ -104,13 +110,15 @@ public class EmailOtpServiceImp implements EmailOtpService {
         try {
             mailSender.send(message);
         } catch (MailException ex) {
+            otpAttemptService.delete(record.getId());
+            rateLimiter.refund(normalized);
             log.warn("Failed to send verification email to {}", normalized, ex);
             throw new BadRequestException("Unable to send the verification email right now");
         }
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void verifyOtp(String email, String otp, String purpose) {
         String normalized = normalize(email);
         requireSupportedPurpose(purpose);
@@ -119,22 +127,21 @@ public class EmailOtpServiceImp implements EmailOtpService {
                 .orElseThrow(() -> new BadRequestException("Invalid or expired verification code"));
 
         if (record.getExpiresAt() == null || record.getExpiresAt().isBefore(LocalDateTime.now())) {
-            otpRepository.delete(record);
+            otpAttemptService.delete(record.getId());
             throw new BadRequestException("Verification code has expired. Please request a new one");
         }
 
         if (record.getAttempts() >= MAX_ATTEMPTS) {
-            otpRepository.delete(record);
+            otpAttemptService.delete(record.getId());
             throw new BadRequestException("Too many incorrect attempts. Please request a new code");
         }
 
         if (otp == null || !passwordEncoder.matches(otp.trim(), record.getOtpHash())) {
-            record.setAttempts(record.getAttempts() + 1);
-            otpRepository.save(record);
+            otpAttemptService.recordFailedAttempt(record.getId());
             throw new BadRequestException("Incorrect verification code");
         }
 
-        otpRepository.delete(record);
+        otpAttemptService.delete(record.getId());
     }
 
     private void requireMailConfiguration() {

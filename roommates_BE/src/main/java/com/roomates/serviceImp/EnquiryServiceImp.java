@@ -2,6 +2,9 @@ package com.roomates.serviceImp;
 
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,26 +83,47 @@ public class EnquiryServiceImp implements EnquiryService {
     @Override
     @Transactional(readOnly = true)
     public List<EnquiryResponse> sent(Integer seekerId) {
-        requireSeekerById(seekerId);
-        return enquiryRepository.findBySeekerIdOrderByCreatedAtDesc(seekerId).stream()
-                .map(this::toResponse)
-                .toList();
+        return sent(seekerId, 0, 100);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnquiryResponse> sent(Integer seekerId, int page, int size) {
+        User user = requireUser(seekerId);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (isAdmin(user)) {
+            return enquiryRepository.findAllBy(pageable).map(this::toResponse).getContent();
+        }
+        requireSeeker(user);
+        return enquiryRepository.findBySeekerId(seekerId, pageable).map(this::toResponse).getContent();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<EnquiryResponse> received(Integer ownerId) {
-        requireRoomManager(ownerId);
-        return enquiryRepository.findByRoomOwnerIdOrderByCreatedAtDesc(ownerId).stream()
-                .map(this::toResponse)
-                .toList();
+        return received(ownerId, 0, 100);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnquiryResponse> received(Integer ownerId, int page, int size) {
+        User user = requireRoomManager(ownerId);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        if (isAdmin(user)) {
+            return enquiryRepository.findAllBy(pageable).map(this::toResponse).getContent();
+        }
+        return enquiryRepository.findByRoomOwnerId(ownerId, pageable).map(this::toResponse).getContent();
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countNewReceived(Integer ownerId) {
-        requireRoomManager(ownerId);
-        return enquiryRepository.countByRoomOwnerIdAndStatus(ownerId, "NEW");
+        User user = requireRoomManager(ownerId);
+        return isAdmin(user)
+                ? enquiryRepository.countByStatus("NEW")
+                : enquiryRepository.countByRoomOwnerIdAndStatus(ownerId, "NEW");
     }
 
     @Override
@@ -109,7 +133,8 @@ public class EnquiryServiceImp implements EnquiryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Enquiry not found"));
 
         Room room = enquiry.getRoom();
-        if (room == null || room.getOwner() == null || !room.getOwner().getId().equals(ownerId)) {
+        boolean admin = userRepository.findById(ownerId).map(this::isAdmin).orElse(false);
+        if (!admin && (room == null || room.getOwner() == null || !room.getOwner().getId().equals(ownerId))) {
             throw new BadRequestException("You can only manage enquiries for your own rooms");
         }
         requireRoomManager(ownerId);
@@ -129,10 +154,9 @@ public class EnquiryServiceImp implements EnquiryService {
         }
     }
 
-    private void requireSeekerById(Integer userId) {
-        User user = userRepository.findById(userId)
+    private User requireUser(Integer userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        requireSeeker(user);
     }
 
     private void requireSeeker(User user) {
@@ -141,12 +165,16 @@ public class EnquiryServiceImp implements EnquiryService {
         }
     }
 
-    private void requireRoomManager(Integer userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    private User requireRoomManager(Integer userId) {
+        User user = requireUser(userId);
         if (!UserTypes.OWNER.equals(user.getUserType()) && !UserTypes.ADMIN.equals(user.getUserType())) {
-            throw new BadRequestException("Only room owners can manage enquiries");
+            throw new BadRequestException("Only room owners and administrators can manage enquiries");
         }
+        return user;
+    }
+
+    private boolean isAdmin(User user) {
+        return UserTypes.ADMIN.equals(user.getUserType());
     }
 
     private EnquiryResponse toResponse(Enquiry enquiry) {

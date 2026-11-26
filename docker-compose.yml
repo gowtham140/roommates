@@ -1,0 +1,60 @@
+name: roommates
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: roommates_db
+      MYSQL_USER: ${DB_USERNAME:-roommates}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change-me-too}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DB_URL: "jdbc:mysql://mysql:3306/roommates_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      ROOM_UPLOAD_DIR: /var/lib/roommates/uploads
+      SERVER_PORT: 8080
+      MAIL_APP_PASSWORD: ${MAIL_APP_PASSWORD:-${MAIL_PASSWORD:-}}
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/var/lib/roommates/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://127.0.0.1:8080/actuator/health' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/}
+    environment:
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+      NGINX_ENVSUBST_FILTER: BACKEND_URL
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  uploads:

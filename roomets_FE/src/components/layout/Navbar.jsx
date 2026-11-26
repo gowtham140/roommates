@@ -19,6 +19,7 @@ import {
   MenuItem,
   Stack,
   Toolbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -41,6 +42,18 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { getNewEnquiryCount } from "../../API/enquiriesAPI";
 import { canManageRooms, isAdmin, isSeeker } from "../../utils/userTypes";
+
+const visuallyHiddenStyles = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  p: 0,
+  m: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 const primaryItems = [
   { label: "Home", path: "/", icon: <HomeOutlined fontSize="small" /> },
@@ -114,7 +127,10 @@ const Navbar = () => {
   }, [owner, seekingClosed]);
 
   const accountItems = useMemo(() => {
-    const items = [{ label: "My Profile", path: "/profile", icon: <PersonOutlineRounded fontSize="small" /> }];
+    const items = [
+      { label: "My Profile", path: "/profile", icon: <PersonOutlineRounded fontSize="small" /> },
+      { label: "Liked Rooms", path: "/liked-rooms", icon: <FavoriteBorderRounded fontSize="small" /> },
+    ];
     if (owner) {
       items.push(
         { label: "My Rooms", path: "/my-rooms", icon: <SpaceDashboardOutlined fontSize="small" /> },
@@ -123,10 +139,7 @@ const Navbar = () => {
       );
     }
     if (seeker) {
-      items.push(
-        { label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> },
-        { label: "Liked Rooms", path: "/liked-rooms", icon: <FavoriteBorderRounded fontSize="small" /> }
-      );
+      items.push({ label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> });
     }
     if (admin) items.push({ label: "Admin Dashboard", path: "/admin", icon: <AdminPanelSettingsOutlined fontSize="small" /> });
     return items.filter((item, index, arr) => arr.findIndex((i) => i.path === item.path) === index);
@@ -194,19 +207,32 @@ const Navbar = () => {
                   </Button>
                 )}
                 {owner && (
-                  <IconButton
-                    onClick={() => goTo("/enquiries")}
-                    aria-label={`${enquiryBadgeCount} new enquiry requests`}
-                    sx={{ color: "#475467", border: "1px solid #D7DFEA", borderRadius: "11px", width: 40, height: 40 }}
-                  >
-                    <Badge badgeContent={enquiryBadgeCount} color="error" max={99}>
-                      <NotificationsNoneRounded fontSize="small" />
-                    </Badge>
-                  </IconButton>
+                  <Tooltip title="Enquiry requests">
+                    <IconButton
+                      onClick={() => goTo("/enquiries")}
+                      aria-label={`${enquiryBadgeCount} new enquiry requests`}
+                      sx={{ color: "#475467", border: "1px solid #D7DFEA", borderRadius: "11px", width: 40, height: 40 }}
+                    >
+                      <Badge badgeContent={enquiryBadgeCount} color="error" max={99}>
+                        <NotificationsNoneRounded fontSize="small" />
+                      </Badge>
+                      <Box
+                        component="span"
+                        aria-live="polite"
+                        aria-atomic="true"
+                        sx={visuallyHiddenStyles}
+                      >
+                        {enquiryBadgeCount} new enquiry requests
+                      </Box>
+                    </IconButton>
+                  </Tooltip>
                 )}
                 <Button
                   onClick={(e) => setAccountAnchor(e.currentTarget)}
                   aria-label="Open account menu"
+                  aria-haspopup="menu"
+                  aria-expanded={Boolean(accountAnchor)}
+                  aria-controls="account-menu"
                   sx={{ display: { xs: "none", md: "inline-flex" }, textTransform: "none", color: "#17233C", border: "1px solid #D7DFEA", borderRadius: "11px", px: 1, py: 0.5, minWidth: 0 }}
                 >
                   <Avatar sx={{ bgcolor: "#0F9D8A", width: 30, height: 30, fontSize: 13, mr: 1 }}>
@@ -217,7 +243,7 @@ const Navbar = () => {
                     <Typography sx={{ fontSize: 11, color: "#667085", lineHeight: 1.2 }} noWrap>{owner ? "Owner" : seeker ? "Seeker" : "Account"}</Typography>
                   </Box>
                 </Button>
-                <Menu anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)} PaperProps={{ sx: { mt: 1, borderRadius: "14px", minWidth: 240, border: "1px solid #E8ECF2" } }}>
+                <Menu id="account-menu" anchorEl={accountAnchor} open={Boolean(accountAnchor)} onClose={() => setAccountAnchor(null)} PaperProps={{ sx: { mt: 1, borderRadius: "14px", minWidth: 240, border: "1px solid #E8ECF2" } }}>
                   <Box sx={{ px: 2, py: 1.25 }}>
                     <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{user.name}</Typography>
                     <Typography sx={{ fontSize: 12, color: "#667085" }} noWrap>{user.email}</Typography>
@@ -236,7 +262,12 @@ const Navbar = () => {
                 </Menu>
               </>
             ) : (
-              <Stack direction="row" spacing={1} sx={{ display: { xs: "none", md: "flex" } }}>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ display: { xs: "none", md: "flex" } }}>
+                <Tooltip title="Liked rooms">
+                  <IconButton component={NavLink} to="/liked-rooms" aria-label="Liked rooms" color="inherit">
+                    <FavoriteBorderRounded />
+                  </IconButton>
+                </Tooltip>
                 <Button component={NavLink} to="/login" variant="outlined" sx={{ textTransform: "none", fontWeight: 600, color: "#17233C", borderColor: "#C9D2E1", borderRadius: "11px", px: 2 }}>
                   Login
                 </Button>
@@ -282,8 +313,31 @@ const Navbar = () => {
             <List subheader={<ListSubheader sx={{ bgcolor: "transparent", px: 1, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#667085", lineHeight: 2.5 }}>MY ACCOUNT</ListSubheader>}>
               {accountItems.map((item) => (
                 <ListItemButton key={item.path} onClick={() => goTo(item.path)} sx={drawerItemSx(isActive(item.path))}>
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+                  <ListItemIcon>
+                    {item.path === "/enquiries" && owner ? (
+                      <Badge badgeContent={enquiryBadgeCount} color="error" max={99}>
+                        {item.icon}
+                      </Badge>
+                    ) : (
+                      item.icon
+                    )}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }}
+                    secondary={
+                      item.path === "/enquiries" && owner ? (
+                        <Box
+                          component="span"
+                          aria-live="polite"
+                          aria-atomic="true"
+                          sx={visuallyHiddenStyles}
+                        >
+                          {enquiryBadgeCount} new enquiry requests
+                        </Box>
+                      ) : null
+                    }
+                  />
                 </ListItemButton>
               ))}
               <ListItemButton onClick={handleLogout} sx={{ borderRadius: "10px", mt: 0.5, color: "#B42318", "& .MuiListItemIcon-root": { color: "#B42318", minWidth: 36 } }}>
@@ -300,6 +354,10 @@ const Navbar = () => {
               <ListItemButton onClick={() => goTo("/register")} sx={drawerItemSx(isActive("/register"))}>
                 <ListItemIcon><AddHomeWorkOutlined fontSize="small" /></ListItemIcon>
                 <ListItemText primary="Sign Up" primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
+              </ListItemButton>
+              <ListItemButton onClick={() => goTo("/liked-rooms")} sx={drawerItemSx(isActive("/liked-rooms"))}>
+                <ListItemIcon><FavoriteBorderRounded fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Liked Rooms" primaryTypographyProps={{ fontSize: 14, fontWeight: 600 }} />
               </ListItemButton>
             </List>
           )}

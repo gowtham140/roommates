@@ -61,6 +61,7 @@ public class AuthServiceImp implements AuthService {
         if (!UserTypes.OWNER.equals(userType) && !UserTypes.SEEKER.equals(userType)) {
             throw new BadRequestException("Please select a valid account type");
         }
+        requirePasswordMatch(request.getPassword(), request.getConfirmPassword());
 
         emailOtpService.verifyOtp(email, request.getOtp(), EmailOtpService.PURPOSE_REGISTER);
 
@@ -69,7 +70,6 @@ public class AuthServiceImp implements AuthService {
         user.setMailID(email);
         user.setPhone_no(request.getPhone().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setCpassword(request.getPassword());
         user.setGender(request.getGender());
         user.setAge(request.getAge());
         user.setWorkingDetails(trimToNull(request.getWorkingDetails()));
@@ -116,6 +116,7 @@ public class AuthServiceImp implements AuthService {
     @Transactional
     public ApiResponse<Void> resetPassword(ResetPasswordRequest request) {
         String email = normalize(request.getEmail());
+        requirePasswordMatch(request.getNewPassword(), request.getConfirmPassword());
         emailOtpService.verifyOtp(email, request.getOtp(), EmailOtpService.PURPOSE_RESET_PASSWORD);
 
         User user = userRepository.findByMailID(email);
@@ -124,7 +125,6 @@ public class AuthServiceImp implements AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setCpassword(request.getNewPassword());
         user.setUpdatedDate(new Date());
         userRepository.save(user);
         return ApiResponse.ok("Password reset successfully", null);
@@ -156,6 +156,12 @@ public class AuthServiceImp implements AuthService {
     private User findUser(Integer userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private void requirePasswordMatch(String password, String confirmPassword) {
+        if (confirmPassword == null || !confirmPassword.equals(password)) {
+            throw new BadRequestException("Password and confirm password must match");
+        }
     }
 
     private String normalize(String email) {

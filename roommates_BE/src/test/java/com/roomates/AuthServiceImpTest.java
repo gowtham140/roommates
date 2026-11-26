@@ -68,6 +68,7 @@ class AuthServiceImpTest {
         request.setEmail(" TEST@Example.COM ");
         request.setPhone("9876543210");
         request.setPassword("secret123");
+        request.setConfirmPassword("secret123");
         request.setOtp("123456");
         request.setGender("FEMALE");
         request.setUserType("3");
@@ -84,11 +85,29 @@ class AuthServiceImpTest {
         User saved = captor.getValue();
         assertEquals("test@example.com", saved.getMailID());
         assertEquals("$2a$hashed", saved.getPassword());
-        assertEquals("secret123", saved.getCpassword());
         assertEquals("Test User", saved.getName());
         assertEquals("9876543210", saved.getPhone_no());
         assertEquals("3", saved.getUserType());
         verify(emailOtpService).verifyOtp("test@example.com", "123456", EmailOtpService.PURPOSE_REGISTER);
+    }
+
+    @Test
+    void registerRejectsMismatchedPasswordConfirmation() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
+        request.setEmail("test@example.com");
+        request.setPhone("9876543210");
+        request.setPassword("secret123");
+        request.setConfirmPassword("different");
+        request.setOtp("123456");
+        request.setGender("FEMALE");
+        request.setUserType("3");
+
+        when(userRepository.existsByMailID("test@example.com")).thenReturn(false);
+
+        assertThrows(BadRequestException.class, () -> service.register(request));
+        org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
+        org.mockito.Mockito.verify(emailOtpService, org.mockito.Mockito.never()).verifyOtp(any(), any(), any());
     }
 
     @Test
@@ -153,6 +172,7 @@ class AuthServiceImpTest {
         request.setEmail(" TEST@Example.com ");
         request.setOtp("654321");
         request.setNewPassword("newSecret");
+        request.setConfirmPassword("newSecret");
 
         User user = new User();
         user.setMailID("test@example.com");
@@ -165,7 +185,6 @@ class AuthServiceImpTest {
 
         assertTrue(result.isSuccess());
         assertEquals("newHash", user.getPassword());
-        assertEquals("newSecret", user.getCpassword());
         verify(emailOtpService).verifyOtp("test@example.com", "654321", EmailOtpService.PURPOSE_RESET_PASSWORD);
         verify(userRepository).save(user);
     }
@@ -176,6 +195,7 @@ class AuthServiceImpTest {
         request.setEmail("test@example.com");
         request.setOtp("000000");
         request.setNewPassword("newSecret");
+        request.setConfirmPassword("newSecret");
 
         org.mockito.Mockito.doThrow(new BadRequestException("Incorrect verification code"))
                 .when(emailOtpService)

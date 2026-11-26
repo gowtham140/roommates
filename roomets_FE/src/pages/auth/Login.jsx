@@ -15,18 +15,17 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import AuthService from "../../session/AuthService";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState(
-    () => localStorage.getItem("rememberedEmail") || ""
-  );
+  const [email, setEmail] = useState(() => AuthService.getRememberedEmail());
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(
-    () => Boolean(localStorage.getItem("rememberedEmail"))
+    () => Boolean(AuthService.getRememberedEmail())
   );
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -58,13 +57,9 @@ const Login = () => {
     setSubmitting(true);
 
     try {
-      await login(loginEmail, loginPassword);
+      await login(loginEmail, loginPassword, remember);
 
-      if (remember) {
-        localStorage.setItem("rememberedEmail", loginEmail);
-      } else {
-        localStorage.removeItem("rememberedEmail");
-      }
+      AuthService.setRememberedEmail(remember ? loginEmail : null);
 
       navigate(location.state?.from || "/rooms", { replace: true });
     } catch (err) {
@@ -98,7 +93,7 @@ const Login = () => {
           border: "1px solid #D7E5EB",
           borderRadius: "20px",
           backgroundColor: "#FFFFFF",
-          px: 4,
+          px: { xs: 2, sm: 4 },
           py: 3.5,
           boxShadow: "0 10px 30px rgba(30, 70, 90, 0.06)",
         }}
@@ -164,6 +159,7 @@ const Login = () => {
           <Box sx={{ mb: 0.6 }}>
             <Typography
               component="label"
+              htmlFor="login-email"
               sx={{
                 display: "block",
                 fontSize: "14px",
@@ -176,6 +172,7 @@ const Login = () => {
             </Typography>
 
             <TextField
+              id="login-email"
               fullWidth
               required
               autoComplete="email"
@@ -191,6 +188,7 @@ const Login = () => {
           <Box sx={{ mb: 1.3 }}>
             <Typography
               component="label"
+              htmlFor="login-password"
               sx={{
                 display: "block",
                 fontSize: "14px",
@@ -203,6 +201,7 @@ const Login = () => {
             </Typography>
 
             <TextField
+              id="login-password"
               fullWidth
               required
               autoComplete="current-password"

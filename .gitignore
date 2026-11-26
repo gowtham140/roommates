@@ -51,3 +51,23 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Maven
+target/
+*.war
+
+# Uploaded files
+uploads/
+**/uploads/
+room_uploads/
+
+# Environment files
+.env.*
+!.env.example
+
+# Eclipse / IDE files
+.classpath
+.project
+.settings/
+.factorypath
+*.swp

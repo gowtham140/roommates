@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.roomates.model.AuthUser;
@@ -15,6 +16,9 @@ import com.roomates.service.AdminService;
 import com.roomates.webModel.AdminUserResponse;
 import com.roomates.webModel.ApiResponse;
 import com.roomates.webModel.RoomResponse;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -48,8 +52,11 @@ public class AdminController {
     }
 
     @GetMapping("/rooms")
-    public ResponseEntity<ApiResponse<List<RoomResponse>>> rooms() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getRooms()));
+    public ResponseEntity<ApiResponse<List<RoomResponse>>> rooms(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(100) int size) {
+
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getRooms(page, size)));
     }
 
     @PatchMapping("/rooms/{id}/block")

@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +33,8 @@ public class RoomServiceImp implements RoomService {
 
     private static final List<String> SORT_PROPERTIES = List.of("createdAt", "rent", "deposit");
     private static final List<String> ADMIN_BLOCKED_STATUSES = List.of("BLOCKED", "BLOCKED_BY_USER");
+    private static final List<String> OWNER_EDITABLE_STATUSES = List.of("ACTIVE", "INACTIVE", "RENTED");
+    private static final Pattern ROOM_IMAGE_URL = Pattern.compile("^/uploads/rooms/[A-Za-z0-9._-]+$");
 
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
@@ -47,6 +51,18 @@ public class RoomServiceImp implements RoomService {
     @Transactional(readOnly = true)
     public Page<RoomResponse> search(String location, BigDecimal minRent, BigDecimal maxRent, String roomType,
             String gender, Boolean food, String foodPreference, int page, int size, String sort) {
+        if (minRent != null && minRent.signum() < 0) {
+            throw new BadRequestException("Minimum rent cannot be negative");
+        }
+        if (maxRent != null && maxRent.signum() < 0) {
+            throw new BadRequestException("Maximum rent cannot be negative");
+        }
+        if (minRent != null && maxRent != null && minRent.compareTo(maxRent) > 0) {
+            throw new BadRequestException("Minimum rent cannot be greater than maximum rent");
+        }
+        if (page < 0 || size < 1) {
+            throw new BadRequestException("Invalid pagination parameters");
+        }
         String locationQuery = StringUtils.hasText(location) ? location.trim() : null;
         String roomTypeQuery = StringUtils.hasText(roomType) ? roomType.trim() : null;
         String genderQuery = StringUtils.hasText(gender) ? gender.trim() : null;
@@ -85,7 +101,7 @@ public class RoomServiceImp implements RoomService {
         Room room = new Room();
         room.setOwner(owner);
         room.setIsDelete(false);
-        applyRequest(room, request);
+        applyRequest(room, request, true);
         return toResponse(roomRepository.save(room));
     }
 
@@ -95,7 +111,7 @@ public class RoomServiceImp implements RoomService {
         Room room = findOwnedRoom(ownerId, id);
         requireRoomManager(ownerId);
         ensureNotAdminBlocked(room);
-        applyRequest(room, request);
+        applyRequest(room, request, false);
         return toResponse(roomRepository.save(room));
     }
 
@@ -118,12 +134,15 @@ public class RoomServiceImp implements RoomService {
         ensureNotAdminBlocked(room);
 
         String target = imageUrl == null ? "" : imageUrl.trim();
-        if (room.getImageUrls() == null || !room.getImageUrls().remove(target)) {
+        if (!ROOM_IMAGE_URL.matcher(target).matches()
+                || room.getImageUrls() == null || !room.getImageUrls().remove(target)) {
             throw new BadRequestException("This photo is not part of the room");
         }
 
-        RoomResponse response = toResponse(roomRepository.save(room));
-        fileStorageService.delete(target);
+        RoomResponse response = toResponse(roomRepository.saveAndFlush(room));
+        if (!roomRepository.existsByImageUrlAndRoomIdNot(target, id)) {
+            fileStorageService.delete(target);
+        }
         return response;
     }
 
@@ -131,7 +150,7 @@ public class RoomServiceImp implements RoomService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (!UserTypes.OWNER.equals(user.getUserType()) && !UserTypes.ADMIN.equals(user.getUserType())) {
-            throw new BadRequestException("Only room owners can manage room listings");
+            throw new BadRequestException("Only room owners and administrators can manage room listings");
         }
         return user;
     }
@@ -146,13 +165,16 @@ public class RoomServiceImp implements RoomService {
         Room room = roomRepository.findById(id)
                 .filter(candidate -> !Boolean.TRUE.equals(candidate.getIsDelete()))
                 .orElseThrow(() -> new ResourceNotFoundException("Room not found"));
-        if (room.getOwner() == null || !room.getOwner().getId().equals(ownerId)) {
+        boolean admin = userRepository.findById(ownerId)
+                .map(user -> UserTypes.ADMIN.equals(user.getUserType()))
+                .orElse(false);
+        if (!admin && (room.getOwner() == null || !room.getOwner().getId().equals(ownerId))) {
             throw new BadRequestException("You can only modify your own rooms");
         }
         return room;
     }
 
-    private void applyRequest(Room room, RoomRequest request) {
+    private void applyRequest(Room room, RoomRequest request, boolean create) {
         room.setTitle(request.getTitle());
         room.setDescription(request.getDescription());
         room.setLocation(request.getLocation());
@@ -166,7 +188,7 @@ public class RoomServiceImp implements RoomService {
         room.setAvailableFrom(request.getAvailableFrom());
         room.setLatitude(request.getLatitude());
         room.setLongitude(request.getLongitude());
-        room.setStatus(StringUtils.hasText(request.getStatus()) ? request.getStatus().trim() : "ACTIVE");
+        room.setStatus(resolveStatus(request.getStatus(), create ? "ACTIVE" : room.getStatus()));
 
         if (room.getAmenities() == null) {
             room.setAmenities(new LinkedHashSet<>());
@@ -181,8 +203,24 @@ public class RoomServiceImp implements RoomService {
         }
         room.getImageUrls().clear();
         if (request.getImageUrls() != null) {
-            room.getImageUrls().addAll(request.getImageUrls());
+            for (String imageUrl : request.getImageUrls()) {
+                if (imageUrl == null || !ROOM_IMAGE_URL.matcher(imageUrl.trim()).matches()) {
+                    throw new BadRequestException("Images must use uploaded room image URLs");
+                }
+                room.getImageUrls().add(imageUrl.trim());
+            }
         }
+    }
+
+    private String resolveStatus(String requestedStatus, String currentStatus) {
+        if (!StringUtils.hasText(requestedStatus)) {
+            return StringUtils.hasText(currentStatus) ? currentStatus : "ACTIVE";
+        }
+        String status = requestedStatus.trim().toUpperCase(Locale.ROOT);
+        if (!OWNER_EDITABLE_STATUSES.contains(status)) {
+            throw new BadRequestException("Invalid room status");
+        }
+        return status;
     }
 
     private Sort resolveSort(String sort) {

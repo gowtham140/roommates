@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -22,7 +22,8 @@ import AddRounded from "@mui/icons-material/AddRounded";
 import { deleteRoom, getMyRooms, updateRoom } from "../../API/roomsAPI";
 import { useAuth } from "../../context/authContext";
 import { canManageRooms } from "../../utils/userTypes";
-import { RoomImage } from "./FindRooms";
+import RoomImage from "../../components/rooms/RoomImage";
+import useLoadEffect from "../../hooks/useLoadEffect";
 
 const ADMIN_BLOCKED = ["BLOCKED", "BLOCKED_BY_USER"];
 
@@ -43,6 +44,8 @@ const MyRooms = () => {
 
   const loadRooms = useCallback(() => {
     let active = true;
+    setError("");
+    setLoading(true);
 
     getMyRooms()
       .then((data) => {
@@ -60,7 +63,7 @@ const MyRooms = () => {
     };
   }, []);
 
-  useEffect(() => loadRooms(), [loadRooms]);
+  useLoadEffect(loadRooms);
 
   const handleStatus = async (room) => {
     const nextStatus = room.status === "ACTIVE" ? "RENTED" : "ACTIVE";

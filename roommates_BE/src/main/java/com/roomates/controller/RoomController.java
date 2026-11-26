@@ -23,6 +23,10 @@ import com.roomates.webModel.RoomRequest;
 import com.roomates.webModel.RoomResponse;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -37,14 +41,14 @@ public class RoomController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<RoomResponse>>> search(
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) BigDecimal minRent,
-            @RequestParam(required = false) BigDecimal maxRent,
+            @RequestParam(required = false) @DecimalMin("0") @DecimalMax("100000000") BigDecimal minRent,
+            @RequestParam(required = false) @DecimalMin("0") @DecimalMax("100000000") BigDecimal maxRent,
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) Boolean food,
             @RequestParam(required = false) String foodPreference,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "12") @Min(1) @Max(50) int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         return ResponseEntity.ok(ApiResponse.ok(

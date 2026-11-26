@@ -1,30 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCurrentPosition } from "../utils/geo";
 
-const useUserLocation = () => {
-  const [position, setPosition] = useState(null);
-  const [error, setError] = useState("");
-  const [requesting, setRequesting] = useState(true);
+const shared = { position: null, error: "", requesting: false };
+const listeners = new Set();
 
-  const load = useCallback((forceRefresh = false) => {
-    getCurrentPosition({ forceRefresh })
-      .then((next) => {
-        setPosition(next);
-        setError("");
-      })
-      .catch((err) => {
-        setError(err?.message || "Location permission was not granted");
-      })
-      .finally(() => setRequesting(false));
+const updateShared = (partial) => {
+  Object.assign(shared, partial);
+  listeners.forEach((listener) => listener({ ...shared }));
+};
+
+const useUserLocation = () => {
+  const [state, setState] = useState({ ...shared });
+
+  useEffect(() => {
+    listeners.add(setState);
+    return () => listeners.delete(setState);
   }, []);
 
-  const refresh = useCallback(() => load(true), [load]);
+  const load = useCallback(async (forceRefresh = false) => {
+    if (shared.requesting) return;
+
+    updateShared({ requesting: true, error: "" });
+    try {
+      const next = await getCurrentPosition({ forceRefresh });
+      updateShared({ position: next, error: "", requesting: false });
+    } catch (err) {
+      updateShared({
+        error: err?.message || "Location permission was not granted",
+        requesting: false,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     load(false);
   }, [load]);
 
-  return { position, error, requesting, refresh };
+  const refresh = useCallback(() => load(true), [load]);
+
+  return { ...state, refresh };
 };
 
 export default useUserLocation;

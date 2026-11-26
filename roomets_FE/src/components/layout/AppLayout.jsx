@@ -1,14 +1,35 @@
+import { Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { Box, CircularProgress } from "@mui/material";
 
 import Navbar from "./Navbar";
+import SessionNotice from "./SessionNotice";
+
+const PageLoader = () => (
+  <Box sx={{ display: "flex", justifyContent: "center", py: 10 }}>
+    <CircularProgress sx={{ color: "#3730E8" }} />
+  </Box>
+);
 
 const AppLayout = () => {
   const location = useLocation();
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const heading = document.querySelector("main h1");
+      if (!heading) return;
+      heading.setAttribute("tabindex", "-1");
+      heading.focus({ preventScroll: true });
+    }, 220);
+
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
+
   return (
     <>
       <Navbar />
+      <SessionNotice />
 
       <AnimatePresence mode="wait">
         <motion.main
@@ -25,7 +46,9 @@ const AppLayout = () => {
             willChange: "opacity, transform",
           }}
         >
-          <Outlet />
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </motion.main>
       </AnimatePresence>
     </>

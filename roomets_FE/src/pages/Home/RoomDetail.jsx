@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import {
   Alert,
@@ -24,11 +24,12 @@ import {
 import { getRoom } from "../../API/roomsAPI";
 import { sendEnquiry } from "../../API/enquiriesAPI";
 import MapView from "../../components/maps/MapView";
+import useLoadEffect from "../../hooks/useLoadEffect";
 import useUserLocation from "../../hooks/useUserLocation";
+import RoomImage from "../../components/rooms/RoomImage";
 import { distanceKm, formatDistance } from "../../utils/geo";
 import { useAuth } from "../../context/authContext";
 import { isOwner as isOwnerRole, isSeeker } from "../../utils/userTypes";
-import { RoomImage } from "./FindRooms";
 
 const RoomDetail = () => {
   const { id } = useParams();
@@ -50,9 +51,12 @@ const RoomDetail = () => {
   });
 
   const loadRoom = useCallback(() => {
-    if (!id) return undefined;
+    if (!id || reloadKey == null) return undefined;
 
     let active = true;
+    setError("");
+    setLoading(true);
+    setRoom(null);
 
     getRoom(id)
       .then((data) => {
@@ -74,9 +78,9 @@ const RoomDetail = () => {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, reloadKey]);
 
-  useEffect(() => loadRoom(), [loadRoom, reloadKey]);
+  useLoadEffect(loadRoom);
 
   const handleEnquiry = async (event) => {
     event.preventDefault();
@@ -202,6 +206,8 @@ const RoomDetail = () => {
       String(user.id) === String(room.ownerId)
   );
   const canEnquire = isSeeker(user);
+  const contactUnlocked = sentEnquiry &&
+    ["CONTACTED", "CONFIRMED"].includes(String(sentEnquiry.status || "").toUpperCase());
 
   return (
     <Box
@@ -585,7 +591,9 @@ const RoomDetail = () => {
 
                   {sentEnquiry && (
                     <Alert severity="success" sx={{ borderRadius: "12px", mt: 1.5 }}>
-                      Owner's contact: {sentEnquiry.ownerPhone || "Shared after the owner responds."}
+                      {contactUnlocked
+                        ? `Owner's contact: ${sentEnquiry.ownerPhone || "Not provided."}`
+                        : "Enquiry sent. The owner's contact is shared after they respond."}
                     </Alert>
                   )}
                 </Box>

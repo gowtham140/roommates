@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,6 +47,9 @@ const ROOM_TYPES = ["1RK", "1BHK", "2BHK", "3BHK"];
 const SHARING_OPTIONS = ["Single", "Double", "Triple"];
 const GENDERS = ["ANY", "MALE", "FEMALE"];
 const FOOD_PREFERENCES = ["Vegetarian", "Non-Vegetarian", "Both"];
+const MAX_ROOM_IMAGES = 8;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif)$/i;
 
 const roomSchema = z.object({
   title: z.string().trim().min(3, "Title must be at least 3 characters"),
@@ -117,9 +120,15 @@ const PostRoom = () => {
     severity: "success",
   });
 
+  const selectedFilesRef = useRef([]);
+
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles;
+  }, [selectedFiles]);
+
   useEffect(
-    () => () => selectedFiles.forEach((item) => URL.revokeObjectURL(item.preview)),
-    [selectedFiles]
+    () => () => selectedFilesRef.current.forEach((item) => URL.revokeObjectURL(item.preview)),
+    []
   );
 
   const loadRoom = useCallback(() => {
@@ -175,9 +184,51 @@ const PostRoom = () => {
 
   const handleFiles = (event) => {
     const files = Array.from(event.target.files || []);
-    setSelectedFiles(
-      files.map((file) => ({ file, preview: URL.createObjectURL(file) }))
-    );
+    event.target.value = "";
+
+    if (files.length === 0) return;
+
+    const existingCount =
+      (editingRoom?.imageUrls || []).length + selectedFilesRef.current.length;
+
+    if (files.length + existingCount > MAX_ROOM_IMAGES) {
+      setSnackbar({
+        open: true,
+        message: `You can keep at most ${MAX_ROOM_IMAGES} photos for a room.`,
+        severity: "error",
+      });
+      return;
+    }
+
+    if (
+      files.some(
+        (file) =>
+          !file.type.startsWith("image/") ||
+          !ALLOWED_IMAGE_EXTENSIONS.test(file.name)
+      )
+    ) {
+      setSnackbar({
+        open: true,
+        message: "Only JPG, PNG, WebP or GIF images are allowed.",
+        severity: "error",
+      });
+      return;
+    }
+
+    const oversized = files.find((file) => file.size > MAX_IMAGE_BYTES);
+    if (oversized) {
+      setSnackbar({
+        open: true,
+        message: "Each image must be 5MB or smaller.",
+        severity: "error",
+      });
+      return;
+    }
+
+    selectedFilesRef.current.forEach((item) => URL.revokeObjectURL(item.preview));
+    const next = files.map((file) => ({ file, preview: URL.createObjectURL(file) }));
+    selectedFilesRef.current = next;
+    setSelectedFiles(next);
   };
 
   const handleRemoveExistingImage = async (url) => {
@@ -207,7 +258,9 @@ const PostRoom = () => {
   };
 
   const handleRemoveSelectedFile = (preview) => {
-    setSelectedFiles((prev) => prev.filter((item) => item.preview !== preview));
+    const next = selectedFilesRef.current.filter((item) => item.preview !== preview);
+    selectedFilesRef.current = next;
+    setSelectedFiles(next);
     URL.revokeObjectURL(preview);
   };
 
@@ -275,6 +328,7 @@ const PostRoom = () => {
 
   const textField = (name) => ({
     ...register(name),
+    id: `room-${name}`,
     error: Boolean(errors[name]),
     helperText: errors[name]?.message || "",
   });
@@ -336,7 +390,7 @@ const PostRoom = () => {
             <SectionTitle title="Basic details" />
             <Grid container spacing={2}>
               <Grid size={12}>
-                <FieldLabel label="Title" />
+                <FieldLabel label="Title" htmlFor="room-title" />
                 <TextField
                   fullWidth
                   placeholder="e.g. Furnished room near metro"
@@ -346,7 +400,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={12}>
-                <FieldLabel label="Description" />
+                <FieldLabel label="Description" htmlFor="room-description" />
                 <TextField
                   fullWidth
                   multiline
@@ -358,7 +412,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Location" />
+                <FieldLabel label="Location" htmlFor="room-location" />
                 <TextField
                   fullWidth
                   placeholder="e.g. Anna Nagar West"
@@ -381,7 +435,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Available from" />
+                <FieldLabel label="Available from" htmlFor="room-availableFrom" />
                 <TextField
                   fullWidth
                   type="date"
@@ -392,7 +446,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Rent (₹ / month)" />
+                <FieldLabel label="Rent (₹ / month)" htmlFor="room-rent" />
                 <TextField
                   fullWidth
                   type="number"
@@ -403,7 +457,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Deposit (₹)" />
+                <FieldLabel label="Deposit (₹)" htmlFor="room-deposit" />
                 <TextField
                   fullWidth
                   type="number"
@@ -417,7 +471,7 @@ const PostRoom = () => {
             <SectionTitle title="Room preferences" />
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 4 }}>
-                <FieldLabel label="Room type" />
+                <FieldLabel label="Room type" labelId="room-roomType-label" />
                 <Controller
                   name="roomType"
                   control={control}
@@ -425,10 +479,17 @@ const PostRoom = () => {
                     <TextField
                       select
                       fullWidth
+                      id="room-roomType"
                       {...field}
                       error={Boolean(errors.roomType)}
                       helperText={errors.roomType?.message || ""}
-                      SelectProps={{ displayEmpty: true }}
+                      slotProps={{
+                        select: {
+                          displayEmpty: true,
+                          labelId: "room-roomType-label",
+                          SelectDisplayProps: { "aria-labelledby": "room-roomType-label" },
+                        },
+                      }}
                       sx={fieldStyles}
                     >
                       <MenuItem value="">Select</MenuItem>
@@ -443,7 +504,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 4 }}>
-                <FieldLabel label="Sharing" />
+                <FieldLabel label="Sharing" labelId="room-sharing-label" />
                 <Controller
                   name="sharing"
                   control={control}
@@ -451,10 +512,17 @@ const PostRoom = () => {
                     <TextField
                       select
                       fullWidth
+                      id="room-sharing"
                       {...field}
                       error={Boolean(errors.sharing)}
                       helperText={errors.sharing?.message || ""}
-                      SelectProps={{ displayEmpty: true }}
+                      slotProps={{
+                        select: {
+                          displayEmpty: true,
+                          labelId: "room-sharing-label",
+                          SelectDisplayProps: { "aria-labelledby": "room-sharing-label" },
+                        },
+                      }}
                       sx={fieldStyles}
                     >
                       <MenuItem value="">Select</MenuItem>
@@ -469,7 +537,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 4 }}>
-                <FieldLabel label="Gender preference" />
+                <FieldLabel label="Gender preference" labelId="room-gender-label" />
                 <Controller
                   name="gender"
                   control={control}
@@ -477,7 +545,14 @@ const PostRoom = () => {
                     <TextField
                       select
                       fullWidth
+                      id="room-gender"
                       {...field}
+                      slotProps={{
+                        select: {
+                          labelId: "room-gender-label",
+                          SelectDisplayProps: { "aria-labelledby": "room-gender-label" },
+                        },
+                      }}
                       sx={fieldStyles}
                     >
                       {GENDERS.map((option) => (
@@ -514,7 +589,7 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Food preference" />
+                <FieldLabel label="Food preference" labelId="room-foodPreference-label" />
                 <Controller
                   name="foodPreference"
                   control={control}
@@ -522,8 +597,15 @@ const PostRoom = () => {
                     <TextField
                       select
                       fullWidth
+                      id="room-foodPreference"
                       {...field}
-                      SelectProps={{ displayEmpty: true }}
+                      slotProps={{
+                        select: {
+                          displayEmpty: true,
+                          labelId: "room-foodPreference-label",
+                          SelectDisplayProps: { "aria-labelledby": "room-foodPreference-label" },
+                        },
+                      }}
                       sx={fieldStyles}
                     >
                       <MenuItem value="">Any food preference</MenuItem>
@@ -781,9 +863,11 @@ const SectionTitle = ({ title }) => (
   </Typography>
 );
 
-const FieldLabel = ({ label }) => (
+const FieldLabel = ({ label, htmlFor, labelId }) => (
   <Typography
-    component="label"
+    component={labelId ? "span" : "label"}
+    id={labelId || `${htmlFor}-label`}
+    htmlFor={labelId ? undefined : htmlFor}
     sx={{
       display: "block",
       fontSize: "14px",

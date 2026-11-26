@@ -24,6 +24,7 @@ import com.roomates.model.Room;
 import com.roomates.model.User;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
 import com.roomates.service.FileStorageService;
 import com.roomates.serviceImp.RoomServiceImp;
 import com.roomates.webModel.RoomRequest;
@@ -122,12 +123,99 @@ class RoomServiceImpTest {
 
         when(roomRepository.findById(5)).thenReturn(Optional.of(room));
         when(userRepository.findById(1)).thenReturn(Optional.of(owner));
-        when(roomRepository.save(room)).thenReturn(room);
+        when(roomRepository.saveAndFlush(room)).thenReturn(room);
+        when(roomRepository.existsByImageUrlAndRoomIdNot("/uploads/rooms/a.png", 5)).thenReturn(false);
 
         RoomResponse response = service.deleteImage(1, 5, "/uploads/rooms/a.png");
 
         assertEquals(java.util.List.of("/uploads/rooms/b.png"), response.getImageUrls());
         verify(fileStorageService).delete("/uploads/rooms/a.png");
+    }
+
+    @Test
+    void adminCanUpdateAnotherOwnersRoom() {
+        User admin = new User();
+        admin.setId(9);
+        admin.setUserType(UserTypes.ADMIN);
+
+        User owner = new User();
+        owner.setId(1);
+        owner.setUserType(UserTypes.OWNER);
+
+        Room room = new Room();
+        room.setId(5);
+        room.setOwner(owner);
+        room.setIsDelete(false);
+        room.setStatus("ACTIVE");
+
+        when(roomRepository.findById(5)).thenReturn(Optional.of(room));
+        when(userRepository.findById(9)).thenReturn(Optional.of(admin));
+        when(roomRepository.save(room)).thenReturn(room);
+
+        RoomRequest request = new RoomRequest();
+        request.setTitle("Updated");
+        request.setLocation("Chennai");
+        request.setRent(BigDecimal.TEN);
+        request.setStatus("RENTED");
+
+        assertEquals("RENTED", service.update(9, 5, request).getStatus());
+    }
+
+    @Test
+    void createRejectsArbitraryImageUrls() {
+        User owner = new User();
+        owner.setId(1);
+        owner.setUserType(UserTypes.OWNER);
+
+        RoomRequest request = new RoomRequest();
+        request.setTitle("Nice room");
+        request.setLocation("Velachery");
+        request.setRent(new BigDecimal("15000"));
+        request.setImageUrls(java.util.List.of("https://example.com/image.png"));
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+
+        assertThrows(BadRequestException.class, () -> service.create(1, request));
+    }
+
+    @Test
+    void createRejectsAdminBlockedStatus() {
+        User owner = new User();
+        owner.setId(1);
+        owner.setUserType(UserTypes.OWNER);
+
+        RoomRequest request = new RoomRequest();
+        request.setTitle("Nice room");
+        request.setLocation("Velachery");
+        request.setRent(new BigDecimal("15000"));
+        request.setStatus("BLOCKED");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+
+        assertThrows(BadRequestException.class, () -> service.create(1, request));
+    }
+
+    @Test
+    void deleteImageKeepsSharedStorageFile() {
+        User owner = new User();
+        owner.setId(1);
+        owner.setUserType("2");
+
+        Room room = new Room();
+        room.setId(5);
+        room.setOwner(owner);
+        room.setIsDelete(false);
+        room.setStatus("ACTIVE");
+        room.setImageUrls(new LinkedHashSet<>(java.util.List.of("/uploads/rooms/a.png", "/uploads/rooms/b.png")));
+
+        when(roomRepository.findById(5)).thenReturn(Optional.of(room));
+        when(userRepository.findById(1)).thenReturn(Optional.of(owner));
+        when(roomRepository.saveAndFlush(room)).thenReturn(room);
+        when(roomRepository.existsByImageUrlAndRoomIdNot("/uploads/rooms/a.png", 5)).thenReturn(true);
+
+        service.deleteImage(1, 5, "/uploads/rooms/a.png");
+
+        verify(fileStorageService, org.mockito.Mockito.never()).delete(any());
     }
 
     @Test

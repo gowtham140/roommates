@@ -7,4 +7,4 @@ export const USER_TYPES = Object.freeze({
 export const isAdmin = (user) => user?.userType === USER_TYPES.ADMIN;
 export const isOwner = (user) => user?.userType === USER_TYPES.OWNER;
 export const isSeeker = (user) => user?.userType === USER_TYPES.SEEKER;
-export const canManageRooms = (user) => isOwner(user) || isAdmin(user);
+export const canManageRooms = (user) => isOwner(user);

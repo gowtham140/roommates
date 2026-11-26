@@ -3,10 +3,15 @@ export const CHENNAI_CENTER = { latitude: 13.0827, longitude: 80.2707 };
 const POSITION_CACHE_MS = 120000;
 let cachedPosition = null;
 let cachedAt = 0;
+let cachedError = null;
+let cachedErrorAt = 0;
 
 export function getCurrentPosition({ forceRefresh = false } = {}) {
   if (!forceRefresh && cachedPosition && Date.now() - cachedAt < POSITION_CACHE_MS) {
     return Promise.resolve(cachedPosition);
+  }
+  if (!forceRefresh && cachedError && Date.now() - cachedErrorAt < POSITION_CACHE_MS) {
+    return Promise.reject(cachedError);
   }
 
   return new Promise((resolve, reject) => {
@@ -23,6 +28,8 @@ export function getCurrentPosition({ forceRefresh = false } = {}) {
         };
         cachedPosition = next;
         cachedAt = Date.now();
+        cachedError = null;
+        cachedErrorAt = 0;
         resolve(next);
       },
       (error) => {
@@ -31,7 +38,9 @@ export function getCurrentPosition({ forceRefresh = false } = {}) {
           2: "Location is unavailable. Use HTTPS or localhost and try again.",
           3: "Location request timed out. Please try again.",
         };
-        reject(new Error(messages[error?.code] || "Unable to get your current location."));
+          cachedError = new Error(messages[error?.code] || "Unable to get your current location.");
+          cachedErrorAt = Date.now();
+          reject(cachedError);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );

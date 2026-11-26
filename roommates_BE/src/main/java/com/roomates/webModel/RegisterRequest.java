@@ -1,6 +1,8 @@
 package com.roomates.webModel;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -16,21 +18,28 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Phone is required")
-    @Size(max = 20)
+    @Pattern(regexp = "^[0-9]{10,15}$", message = "Phone must contain 10 to 15 digits")
     private String phone;
 
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
 
+    @NotBlank(message = "Confirm password is required")
+    private String confirmPassword;
+
     @NotBlank(message = "Email verification code is required")
     @Pattern(regexp = "\\d{6}", message = "Verification code must be 6 digits")
     private String otp;
 
+    @NotBlank(message = "Gender is required")
+    @Pattern(regexp = "^(ANY|MALE|FEMALE|OTHER)$", message = "Invalid gender")
     private String gender;
 
     private String userType;
 
+    @Min(value = 18, message = "Age must be at least 18")
+    @Max(value = 100, message = "Age must be at most 100")
     private Integer age;
 
     @Size(max = 500)
@@ -69,6 +78,14 @@ public class RegisterRequest {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getConfirmPassword() {
+        return confirmPassword;
+    }
+
+    public void setConfirmPassword(String confirmPassword) {
+        this.confirmPassword = confirmPassword;
     }
 
     public String getOtp() {

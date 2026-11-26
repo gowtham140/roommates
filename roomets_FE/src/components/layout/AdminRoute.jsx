@@ -1,9 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import { isAdmin } from "../../utils/userTypes";
 
 const AdminRoute = () => {
   const { user } = useAuth();
-  return user?.userType === "1" ? <Outlet /> : <Navigate to="/" replace />;
+  return isAdmin(user) ? <Outlet /> : <Navigate to="/" replace />;
 };
 
 export default AdminRoute;

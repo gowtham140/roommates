@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Box,
@@ -6,6 +6,10 @@ import {
   Chip,
   Container,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Snackbar,
   Tab,
@@ -28,6 +32,7 @@ import {
   setUserBlocked,
 } from "../../API/adminAPI";
 import { useAuth } from "../../context/authContext";
+import useLoadEffect from "../../hooks/useLoadEffect";
 
 const ADMIN_BLOCKED = ["BLOCKED", "BLOCKED_BY_USER"];
 
@@ -39,10 +44,13 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyKey, setBusyKey] = useState("");
-  const [notice, setNotice] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState(null);
+  const [notice, setNotice] = useState({ message: "", severity: "success" });
 
   const load = useCallback(() => {
     let active = true;
+    setError("");
+    setLoading(true);
 
     Promise.all([getAdminUsers(), getAdminRooms()])
       .then(([userRows, roomRows]) => {
@@ -63,7 +71,7 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  useEffect(() => load(), [load]);
+  useLoadEffect(load);
 
   const handleUserBlock = async (row, blocked) => {
     const key = `user-${row.id}`;
@@ -73,9 +81,15 @@ const AdminDashboard = () => {
       setUsers((rows) => rows.map((item) => (item.id === row.id ? updated : item)));
       const refreshedRooms = await getAdminRooms();
       setRooms(Array.isArray(refreshedRooms) ? refreshedRooms : []);
-      setNotice(blocked ? `${row.name} blocked. Their rooms were blocked too.` : `${row.name} unblocked.`);
+      setNotice({
+        message: blocked ? `${row.name} blocked. Their rooms were blocked too.` : `${row.name} unblocked.`,
+        severity: "success",
+      });
     } catch (err) {
-      setNotice(err?.message || "Unable to update user status.");
+      setNotice({
+        message: err?.message || "Unable to update user status.",
+        severity: "error",
+      });
     } finally {
       setBusyKey("");
     }
@@ -87,11 +101,28 @@ const AdminDashboard = () => {
     try {
       const updated = await setRoomBlocked(row.id, blocked);
       setRooms((rows) => rows.map((item) => (item.id === row.id ? updated : item)));
-      setNotice(blocked ? `${row.title} blocked.` : `${row.title} unblocked.`);
+      setNotice({
+        message: blocked ? `${row.title} blocked.` : `${row.title} unblocked.`,
+        severity: "success",
+      });
     } catch (err) {
-      setNotice(err?.message || "Unable to update room status.");
+      setNotice({
+        message: err?.message || "Unable to update room status.",
+        severity: "error",
+      });
     } finally {
       setBusyKey("");
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (!confirmTarget) return;
+    const { row, blocked, kind } = confirmTarget;
+    setConfirmTarget(null);
+    if (kind === "user") {
+      await handleUserBlock(row, blocked);
+    } else {
+      await handleRoomBlock(row, blocked);
     }
   };
 
@@ -136,7 +167,16 @@ const AdminDashboard = () => {
 
         {error && (
           <Box sx={{ px: 3, pt: 3 }}>
-            <Alert severity="error">{error}</Alert>
+            <Alert
+              severity="error"
+              action={
+                <Button color="inherit" size="small" onClick={load}>
+                  Retry
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
           </Box>
         )}
 
@@ -145,7 +185,19 @@ const AdminDashboard = () => {
             <CircularProgress />
           </Box>
         ) : tab === 0 ? (
-          <TableContainer>
+          <>
+          <Box sx={{ display: { xs: "grid", md: "none" }, gap: 1.5, p: 2 }}>
+            {users.map((row) => (
+              <AdminUserCard
+                key={row.id}
+                row={row}
+                currentUserId={currentUser?.id}
+                busy={busyKey === `user-${row.id}`}
+                onConfirm={(blocked) => setConfirmTarget({ row, blocked, kind: "user" })}
+              />
+            ))}
+          </Box>
+          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#F8FAFC" }}>
@@ -190,7 +242,9 @@ const AdminDashboard = () => {
                           variant="outlined"
                           disabled={disabled}
                           startIcon={row.blocked ? <CheckCircleRounded /> : <BlockRounded />}
-                          onClick={() => handleUserBlock(row, !row.blocked)}
+                          onClick={() =>
+                            setConfirmTarget({ row, blocked: !row.blocked, kind: "user" })
+                          }
                           sx={{ textTransform: "none", fontWeight: 700 }}
                         >
                           {busyKey === `user-${row.id}`
@@ -206,8 +260,21 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          </>
         ) : (
-          <TableContainer>
+          <>
+          <Box sx={{ display: { xs: "grid", md: "none" }, gap: 1.5, p: 2 }}>
+            {rooms.map((row) => (
+              <AdminRoomCard
+                key={row.id}
+                row={row}
+                blocked={ADMIN_BLOCKED.includes(row.status)}
+                busy={busyKey === `room-${row.id}`}
+                onConfirm={(blocked) => setConfirmTarget({ row, blocked, kind: "room" })}
+              />
+            ))}
+          </Box>
+          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#F8FAFC" }}>
@@ -250,7 +317,9 @@ const AdminDashboard = () => {
                           variant="outlined"
                           disabled={busyKey === `room-${row.id}`}
                           startIcon={blocked ? <CheckCircleRounded /> : <BlockRounded />}
-                          onClick={() => handleRoomBlock(row, !blocked)}
+                          onClick={() =>
+                            setConfirmTarget({ row, blocked: !blocked, kind: "room" })
+                          }
                           sx={{ textTransform: "none", fontWeight: 700 }}
                         >
                           {busyKey === `room-${row.id}`
@@ -266,17 +335,149 @@ const AdminDashboard = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          </>
         )}
       </Paper>
 
+      <Dialog
+        open={Boolean(confirmTarget)}
+        onClose={() => setConfirmTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "18px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "#17233C" }}>
+          {confirmTarget?.blocked ? "Block" : "Unblock"}{" "}
+          {confirmTarget?.kind === "user" ? "this user?" : "this room?"}
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: "14px", color: "#667085" }}>
+            {confirmTarget?.kind === "user"
+              ? `${confirmTarget?.row?.name || "This user"} will ${
+                  confirmTarget?.blocked ? "be blocked, along with their rooms" : "be unblocked"
+                }.`
+              : `${confirmTarget?.row?.title || "This room"} will ${
+                  confirmTarget?.blocked ? "no longer be visible to seekers" : "be visible again"
+                }.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => setConfirmTarget(null)}
+            sx={{ color: "#667085", textTransform: "none", fontWeight: 700 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmBlock}
+            variant="contained"
+            color={confirmTarget?.blocked ? "error" : "primary"}
+            sx={{ borderRadius: "10px", textTransform: "none", fontWeight: 700, boxShadow: "none" }}
+          >
+            {confirmTarget?.blocked ? "Block" : "Unblock"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
-        open={Boolean(notice)}
+        open={Boolean(notice.message)}
         autoHideDuration={3500}
-        onClose={() => setNotice("")}
-        message={notice}
-      />
+        onClose={() => setNotice({ message: "", severity: "success" })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={notice.severity}
+          variant="filled"
+          onClose={() => setNotice({ message: "", severity: "success" })}
+          sx={{ width: "100%" }}
+        >
+          {notice.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
+
+const cardSx = {
+  borderRadius: "14px",
+  border: "1px solid #E3EBF0",
+  p: 2,
+  backgroundColor: "#FFFFFF",
+};
+
+const AdminUserCard = ({ row, currentUserId, busy, onConfirm }) => {
+  const isAdmin = row.userType === "1";
+  const disabled = isAdmin || row.id === currentUserId || busy;
+
+  return (
+    <Paper elevation={0} sx={cardSx}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "flex-start" }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#17233C" }}>{row.name}</Typography>
+          <Typography sx={{ fontSize: 12, color: "#667085", overflowWrap: "anywhere" }}>{row.email}</Typography>
+        </Box>
+        <Chip
+          size="small"
+          label={row.blocked ? "Blocked" : "Active"}
+          sx={{
+            fontWeight: 700,
+            backgroundColor: row.blocked ? "#FEE4E2" : "#E4F8F4",
+            color: row.blocked ? "#B42318" : "#0F9D8A",
+          }}
+        />
+      </Box>
+      <Typography sx={{ fontSize: 12, color: "#667085", mt: 1.5 }}>
+        {isAdmin ? "Admin" : "User"} · {row.activeRoomCount} active / {row.blockedRoomCount} blocked
+      </Typography>
+      <Button
+        fullWidth
+        size="small"
+        variant="outlined"
+        disabled={disabled}
+        startIcon={row.blocked ? <CheckCircleRounded /> : <BlockRounded />}
+        onClick={() => onConfirm(!row.blocked)}
+        sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }}
+      >
+        {busy ? "Working..." : row.blocked ? "Unblock" : "Block"}
+      </Button>
+    </Paper>
+  );
+};
+
+const AdminRoomCard = ({ row, blocked, busy, onConfirm }) => (
+  <Paper elevation={0} sx={cardSx}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, alignItems: "flex-start" }}>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 700, color: "#17233C" }}>{row.title}</Typography>
+        <Typography sx={{ fontSize: 12, color: "#667085" }}>
+          ₹{Number(row.rent || 0).toLocaleString("en-IN")} / month
+        </Typography>
+      </Box>
+      <Chip
+        size="small"
+        label={row.status || "ACTIVE"}
+        sx={{
+          fontWeight: 700,
+          backgroundColor: blocked ? "#FEE4E2" : "#E4F8F4",
+          color: blocked ? "#B42318" : "#0F9D8A",
+        }}
+      />
+    </Box>
+    <Typography sx={{ fontSize: 12, color: "#667085", mt: 1.5 }}>
+      {row.ownerName || "-"} · {row.location || "-"}
+    </Typography>
+    <Button
+      fullWidth
+      size="small"
+      variant="outlined"
+      disabled={busy}
+      startIcon={blocked ? <CheckCircleRounded /> : <BlockRounded />}
+      onClick={() => onConfirm(!blocked)}
+      sx={{ mt: 1.5, textTransform: "none", fontWeight: 700 }}
+    >
+      {busy ? "Working..." : blocked ? "Unblock" : "Block"}
+    </Button>
+  </Paper>
+);
 
 export default AdminDashboard;

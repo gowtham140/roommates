@@ -22,19 +22,18 @@ import {
   ChevronRightRounded,
   FavoriteBorderRounded,
   FavoriteRounded,
-  HomeRounded,
   LocationOnOutlined,
   NearMeRounded,
   SearchOffRounded,
 } from "@mui/icons-material";
 import RoomFilters from "../../components/rooms/RoomFilters";
+import RoomImage from "../../components/rooms/RoomImage";
 import {
   ROOM_FILTER_KEYS,
   createRoomFilterValues,
   toRoomFilterQuery,
 } from "../../components/rooms/roomFilterUtils";
 import { getRooms } from "../../API/roomsAPI";
-import { resolveImageUrl } from "../../API/app-config";
 import { useAuth } from "../../context/authContext";
 import useUserLocation from "../../hooks/useUserLocation";
 import { distanceKm, formatDistance } from "../../utils/geo";
@@ -141,8 +140,18 @@ const FindRooms = () => {
     }
   };
 
-  const clearFilters = () => {
+  const clearDraftFilters = () => {
     setDraftFilters(createRoomFilterValues());
+  };
+
+  const resetAppliedFilters = () => {
+    setDraftFilters(createRoomFilterValues());
+    setPage(0);
+    setRooms([]);
+    setTotalElements(0);
+    setTotalPages(0);
+    setError("");
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   const toggleSave = (roomId) => {
@@ -200,7 +209,7 @@ const FindRooms = () => {
           <RoomFilters
             values={draftFilters}
             onChange={updateFilter}
-            onClear={clearFilters}
+            onClear={clearDraftFilters}
             onSubmit={submitFilters}
           />
         </Paper>
@@ -322,7 +331,7 @@ const FindRooms = () => {
             </Typography>
             <Button
               variant="outlined"
-              onClick={clearFilters}
+              onClick={resetAppliedFilters}
               sx={{
                 borderRadius: "11px",
                 borderColor: "#BDD3DF",
@@ -698,47 +707,6 @@ const arrowStyles = ({ left, right }) => ({
   "&:hover": { backgroundColor: "#FFFFFF" },
   "&.Mui-disabled": { opacity: 0.35, backgroundColor: "rgba(255,255,255,0.8)" },
 });
-
-export const RoomImage = ({ src, alt, height = 220, sx }) => {
-  const [brokenSrc, setBrokenSrc] = useState(null);
-  const resolvedSrc = resolveImageUrl(src);
-  const isBroken = !resolvedSrc || brokenSrc === resolvedSrc;
-
-  if (isBroken) {
-    return (
-      <Box
-        sx={{
-          height,
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg, #DFF7F2 0%, #DCE5FF 100%)",
-          color: "#0F9D8A",
-          ...sx,
-        }}
-      >
-        <HomeRounded sx={{ fontSize: 54, opacity: 0.75 }} />
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      component="img"
-      src={resolvedSrc}
-      alt={alt || "Room"}
-      onError={() => setBrokenSrc(resolvedSrc)}
-      sx={{
-        height,
-        width: "100%",
-        objectFit: "cover",
-        display: "block",
-        ...sx,
-      }}
-    />
-  );
-};
 
 const InfoChip = ({ label }) => (
   <Chip

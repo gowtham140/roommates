@@ -1,6 +1,7 @@
 const TOKEN_KEY = "TOKEN";
 const USER_KEY = "USER";
 const REMEMBER_KEY = "REMEMBER";
+const REMEMBERED_EMAIL_KEY = "rememberedEmail";
 
 const read = (key, storage) => {
   try {
@@ -45,10 +46,18 @@ const AuthService = {
     }
   },
 
-  setUser(user, remember = false) {
+  setUser(user, remember = read(REMEMBER_KEY, localStorage) === "true") {
     const value = user ? JSON.stringify(user) : null;
     write(USER_KEY, value, sessionStorage);
     write(USER_KEY, remember ? value : null, localStorage);
+  },
+
+  getRememberedEmail() {
+    return read(REMEMBERED_EMAIL_KEY, localStorage) || "";
+  },
+
+  setRememberedEmail(email) {
+    write(REMEMBERED_EMAIL_KEY, email || null, localStorage);
   },
 
   isAuthenticated() {

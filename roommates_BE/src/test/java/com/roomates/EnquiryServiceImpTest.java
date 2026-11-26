@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import com.roomates.exception.BadRequestException;
 import com.roomates.exception.ResourceNotFoundException;
@@ -163,6 +165,56 @@ class EnquiryServiceImpTest {
         when(userRepository.findById(8)).thenReturn(Optional.of(seeker));
 
         assertThrows(BadRequestException.class, () -> service.received(8));
+    }
+
+    @Test
+    void adminCanUpdateEnquiryForAnyRoom() {
+        User admin = new User();
+        admin.setId(9);
+        admin.setUserType(UserTypes.ADMIN);
+
+        User owner = new User();
+        owner.setId(1);
+        owner.setUserType(UserTypes.OWNER);
+
+        Room room = new Room();
+        room.setId(3);
+        room.setOwner(owner);
+
+        Enquiry enquiry = new Enquiry();
+        enquiry.setId(4);
+        enquiry.setRoom(room);
+        enquiry.setStatus("NEW");
+
+        when(enquiryRepository.findById(4)).thenReturn(Optional.of(enquiry));
+        when(userRepository.findById(9)).thenReturn(Optional.of(admin));
+
+        service.updateStatus(9, 4, "CONTACTED");
+
+        assertEquals("CONTACTED", enquiry.getStatus());
+        verify(enquiryRepository).save(enquiry);
+    }
+
+    @Test
+    void adminReceivedEnquiriesIncludeAllRooms() {
+        User admin = new User();
+        admin.setId(9);
+        admin.setUserType(UserTypes.ADMIN);
+
+        Room room = new Room();
+        room.setId(3);
+        room.setTitle("Any room");
+
+        Enquiry enquiry = new Enquiry();
+        enquiry.setId(4);
+        enquiry.setRoom(room);
+        enquiry.setStatus("NEW");
+
+        when(userRepository.findById(9)).thenReturn(Optional.of(admin));
+        when(enquiryRepository.findAllBy(org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(enquiry)));
+
+        assertEquals(1, service.received(9, 0, 10).size());
     }
 
     @Test

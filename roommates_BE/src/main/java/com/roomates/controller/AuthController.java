@@ -18,7 +18,6 @@ import com.roomates.webModel.LoginRequest;
 import com.roomates.webModel.OtpRequest;
 import com.roomates.webModel.ProfileRequest;
 import com.roomates.webModel.RegisterRequest;
-import com.roomates.webModel.RequestModel;
 import com.roomates.webModel.ResetPasswordRequest;
 import com.roomates.webModel.UserDto;
 
@@ -34,11 +33,6 @@ public class AuthController {
     public AuthController(AuthService authService, EmailOtpService emailOtpService) {
         this.authService = authService;
         this.emailOtpService = emailOtpService;
-    }
-
-    @PostMapping("/test")
-    public String test() {
-        return "Hello world";
     }
 
     @PostMapping("/register")
@@ -79,15 +73,4 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Profile updated", authService.updateProfile(principal.getUserId(), request)));
     }
 
-    @PostMapping("/createUser")
-    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestBody RequestModel legacy) {
-        RegisterRequest request = new RegisterRequest();
-        request.setName(legacy.getName());
-        request.setEmail(legacy.getEmail());
-        request.setPhone(legacy.getPhone());
-        request.setPassword(legacy.getPassword());
-        request.setGender(legacy.getGender());
-        request.setAge(legacy.getAge());
-        return register(request);
-    }
 }

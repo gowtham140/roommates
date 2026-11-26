@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link as RouterLink, Navigate } from "react-router-dom";
 import {
   Alert,
@@ -9,6 +9,10 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Snackbar,
   Typography,
@@ -21,6 +25,7 @@ import {
 } from "../../API/enquiriesAPI";
 import { useAuth } from "../../context/authContext";
 import { canManageRooms } from "../../utils/userTypes";
+import useLoadEffect from "../../hooks/useLoadEffect";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -42,6 +47,7 @@ const MyEnquiries = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [confirmTarget, setConfirmTarget] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -52,6 +58,8 @@ const MyEnquiries = () => {
     if (!user) return undefined;
 
     let active = true;
+    setError("");
+    setLoading(true);
     const request = ownerView ? getReceivedEnquiries() : getSentEnquiries();
 
     request
@@ -77,7 +85,7 @@ const MyEnquiries = () => {
     };
   }, [user, ownerView]);
 
-  useEffect(() => loadEnquiries(), [loadEnquiries]);
+  useLoadEffect(loadEnquiries);
 
   const handleStatus = async (enquiry, status) => {
     setBusyId(enquiry.id);
@@ -105,6 +113,13 @@ const MyEnquiries = () => {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const handleConfirm = () => {
+    if (!confirmTarget) return;
+    const enquiry = confirmTarget;
+    setConfirmTarget(null);
+    handleStatus(enquiry, "CONFIRMED");
   };
 
   if (!authLoading && !user) {
@@ -241,6 +256,7 @@ const MyEnquiries = () => {
                     received={ownerView}
                     busy={busyId === enquiry.id}
                     onStatus={handleStatus}
+                    onConfirm={() => setConfirmTarget(enquiry)}
                   />
                 ))}
               </Box>
@@ -248,6 +264,39 @@ const MyEnquiries = () => {
           </Box>
         </Paper>
       </Container>
+
+      <Dialog
+        open={Boolean(confirmTarget)}
+        onClose={() => setConfirmTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "18px" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700, color: "#17233C" }}>
+          Confirm and close seeking?
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: "14px", color: "#667085" }}>
+            {confirmTarget?.roomTitle || "This enquiry"} will be marked as confirmed and the
+            seeker's room seeking will be closed. This cannot be undone from here.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            onClick={() => setConfirmTarget(null)}
+            sx={{ color: "#667085", textTransform: "none", fontWeight: 700 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            variant="contained"
+            sx={{ ...primaryButtonStyles, backgroundColor: "#0F9D8A", "&:hover": { backgroundColor: "#0B8676" } }}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}
@@ -268,7 +317,12 @@ const MyEnquiries = () => {
   );
 };
 
-const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
+const EnquiryCard = ({ enquiry, received, busy, onStatus, onConfirm }) => {
+  const status = String(enquiry.status || "NEW").toUpperCase();
+  const canSeeOwnerPhone =
+    received || ["CONTACTED", "CONFIRMED"].includes(status);
+
+  return (
   <Card
     elevation={0}
     sx={{
@@ -314,7 +368,7 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
       >
         <Info label="Seeker" value={enquiry.seekerName || "—"} />
         <Info label="Seeker phone" value={enquiry.seekerPhone || "—"} />
-        <Info label="Owner phone" value={enquiry.ownerPhone || "—"} />
+        {canSeeOwnerPhone && <Info label="Owner phone" value={enquiry.ownerPhone || "—"} />}
         {enquiry.seekerWorkingDetails && <Info label="Working" value={enquiry.seekerWorkingDetails} />}
         {enquiry.seekerHobbyPreferences && <Info label="Hobbies / preferences" value={enquiry.seekerHobbyPreferences} />}
         {enquiry.seekerSeekingClosed && <Info label="Seeking status" value="Closed" />}
@@ -336,7 +390,7 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
             <Button
               variant="contained"
               disabled={busy}
-              onClick={() => onStatus(enquiry, "CONFIRMED")}
+              onClick={onConfirm}
               sx={{ ...primaryButtonStyles, backgroundColor: "#0F9D8A", "&:hover": { backgroundColor: "#0B8676", boxShadow: "none" } }}
             >
               {busy ? <CircularProgress size={17} color="inherit" /> : "Confirm & close seeking"}
@@ -372,7 +426,8 @@ const EnquiryCard = ({ enquiry, received, busy, onStatus }) => (
       )}
     </CardContent>
   </Card>
-);
+  );
+};
 
 const StatusChip = ({ status }) => {
   const normalized = String(status || "NEW").toUpperCase();

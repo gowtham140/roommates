@@ -14,7 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "users_tb", uniqueConstraints = @UniqueConstraint(name = "uk_users_email", columnNames = "mailID"))
-@JsonIgnoreProperties({ "password", "cpassword" })
+@JsonIgnoreProperties({ "password" })
 public class User {
 
 	@Id
@@ -39,9 +39,6 @@ public class User {
 
 	@Column(name = "password")
 	private String password;
-
-	@Column(name = "cpassword")
-	private String cpassword;
 
 	@Column(name = "status")
 	private Boolean status;
@@ -121,14 +118,6 @@ public class User {
 
 	public void setPassword(String password) {
 		this.password = password;
-	}
-
-	public String getCpassword() {
-		return cpassword;
-	}
-
-	public void setCpassword(String cpassword) {
-		this.cpassword = cpassword;
 	}
 
 	public Boolean getStatus() {

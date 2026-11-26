@@ -13,5 +13,7 @@ public interface AdminService {
 
     List<RoomResponse> getRooms();
 
+    List<RoomResponse> getRooms(int page, int size);
+
     RoomResponse setRoomBlocked(Integer roomId, boolean blocked);
 }

@@ -187,7 +187,7 @@ const Register = () => {
           border: "1px solid #D7E5EB",
           borderRadius: "20px",
           backgroundColor: "#FFFFFF",
-          px: 4,
+          px: { xs: 2, sm: 4 },
           py: 3.5,
           boxShadow: "0 10px 30px rgba(30, 70, 90, 0.06)",
         }}
@@ -226,7 +226,8 @@ const Register = () => {
             <Grid size={12}>
               <FormControl fullWidth size="medium">
                 <Typography
-                  component="label"
+                  component="span"
+                  id="register-user-type-label"
                   sx={{
                     fontSize: "14px",
                     fontWeight: 700,
@@ -237,11 +238,13 @@ const Register = () => {
                   Account type
                 </Typography>
                 <Select
+                  id="register-user-type"
                   name="userType"
                   value={formData.userType}
                   onChange={handleChange}
                   displayEmpty
-                  inputProps={{ "aria-label": "Account type" }}
+                  labelId="register-user-type-label"
+                  SelectDisplayProps={{ "aria-labelledby": "register-user-type-label" }}
                   sx={{
                     height: 47,
                     borderRadius: "11px",
@@ -322,7 +325,8 @@ const Register = () => {
             <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth size="medium">
                 <Typography
-                  component="label"
+                  component="span"
+                  id="register-gender-label"
                   sx={{
                     fontSize: "14px",
                     fontWeight: 700,
@@ -333,11 +337,13 @@ const Register = () => {
                   Gender
                 </Typography>
                 <Select
+                  id="register-gender"
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
                   displayEmpty
-                  inputProps={{ "aria-label": "Gender" }}
+                  labelId="register-gender-label"
+                  SelectDisplayProps={{ "aria-labelledby": "register-gender-label" }}
                   sx={{
                     height: 47,
                     borderRadius: "11px",
@@ -563,10 +569,13 @@ const Register = () => {
 };
 
 const FormField = ({ label, name, type = "text", value, onChange, placeholder, inputProps }) => {
+  const inputId = `register-${name}`;
+
   return (
     <Box>
       <Typography
         component="label"
+        htmlFor={inputId}
         sx={{
           display: "block",
           fontSize: "14px",
@@ -579,6 +588,7 @@ const FormField = ({ label, name, type = "text", value, onChange, placeholder, i
       </Typography>
 
       <TextField
+        id={inputId}
         fullWidth
         name={name}
         type={type}

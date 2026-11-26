@@ -1,0 +1,14 @@
+FROM node:22-alpine AS build
+WORKDIR /build
+COPY roomets_FE/package.json roomets_FE/package-lock.json ./
+RUN npm ci
+COPY roomets_FE/ ./
+ARG VITE_API_URL=/
+RUN VITE_API_URL="$VITE_API_URL" npm run build
+
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY --from=build /build/dist /usr/share/nginx/html
+ENV BACKEND_URL=http://backend:8080 \
+    NGINX_ENVSUBST_FILTER=BACKEND_URL
+EXPOSE 80

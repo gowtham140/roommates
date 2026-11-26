@@ -20,7 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import PersonOutlineRounded from "@mui/icons-material/PersonOutlineRounded";
-import { getMe, updateMe } from "../../API/authAPI";
+import { getMe } from "../../API/authAPI";
 import { useAuth } from "../../context/authContext";
 
 const Profile = () => {
@@ -301,7 +301,7 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
   const [form, setForm] = useState({
     name: profile.name || "",
     phone: profile.phone || "",
-    gender: profile.gender || "",
+    gender: ["MALE", "FEMALE", "OTHER"].includes(profile.gender) ? profile.gender : "ANY",
     age: profile.age != null ? String(profile.age) : "",
     workingDetails: profile.workingDetails || "",
     hobbyPreferences: profile.hobbyPreferences || "",
@@ -321,23 +321,29 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
       onError("Name and phone are required.");
       return;
     }
+    if (!/^\d{10,15}$/.test(form.phone.trim())) {
+      onError("Phone must contain 10 to 15 digits.");
+      return;
+    }
+
+    const age = form.age === "" ? null : Number(form.age);
+    if (form.age !== "" && (!Number.isInteger(age) || age < 18 || age > 100)) {
+      onError("Age must be between 18 and 100.");
+      return;
+    }
 
     setSaving(true);
 
     try {
-      const updated = await updateMe({
+      const updated = await updateUser({
         name: form.name.trim(),
         phone: form.phone.trim(),
         gender: form.gender,
-        age: form.age === "" ? null : Number(form.age),
+        age,
         workingDetails: form.workingDetails.trim(),
         hobbyPreferences: form.hobbyPreferences.trim(),
         seekingClosed: form.seekingClosed,
       });
-
-      if (typeof updateUser === "function") {
-        updateUser(updated);
-      }
 
       onSaved(updated || profile);
     } catch (err) {
@@ -351,8 +357,9 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
     <Box component="form" onSubmit={handleSubmit}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Name</Typography>
+          <Typography component="label" htmlFor="profile-name" sx={labelStyles}>Name</Typography>
           <TextField
+            id="profile-name"
             fullWidth
             name="name"
             value={form.name}
@@ -362,8 +369,9 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Phone</Typography>
+          <Typography component="label" htmlFor="profile-phone" sx={labelStyles}>Phone</Typography>
           <TextField
+            id="profile-phone"
             fullWidth
             name="phone"
             value={form.phone}
@@ -373,16 +381,20 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Gender</Typography>
+          <Typography component="span" id="profile-gender-label" sx={labelStyles}>
+            Gender
+          </Typography>
           <FormControl fullWidth sx={fieldStyles}>
             <Select
+              id="profile-gender"
               name="gender"
               value={form.gender}
               onChange={handleChange}
               displayEmpty
-              inputProps={{ "aria-label": "Gender" }}
+              labelId="profile-gender-label"
+              SelectDisplayProps={{ "aria-labelledby": "profile-gender-label" }}
             >
-              <MenuItem value="">Not specified</MenuItem>
+              <MenuItem value="ANY">Not specified</MenuItem>
               <MenuItem value="MALE">Male</MenuItem>
               <MenuItem value="FEMALE">Female</MenuItem>
               <MenuItem value="OTHER">Other</MenuItem>
@@ -391,8 +403,9 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Age</Typography>
+          <Typography component="label" htmlFor="profile-age" sx={labelStyles}>Age</Typography>
           <TextField
+            id="profile-age"
             fullWidth
             name="age"
             type="number"
@@ -404,8 +417,11 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Working details</Typography>
+          <Typography component="label" htmlFor="profile-working-details" sx={labelStyles}>
+            Working details
+          </Typography>
           <TextField
+            id="profile-working-details"
             fullWidth
             name="workingDetails"
             value={form.workingDetails}
@@ -416,8 +432,11 @@ const ProfileForm = ({ profile, updateUser, onSaved, onError }) => {
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6 }}>
-          <Typography sx={labelStyles}>Hobby / preferences</Typography>
+          <Typography component="label" htmlFor="profile-hobbies" sx={labelStyles}>
+            Hobby / preferences
+          </Typography>
           <TextField
+            id="profile-hobbies"
             fullWidth
             name="hobbyPreferences"
             value={form.hobbyPreferences}

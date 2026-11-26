@@ -27,10 +27,12 @@ const fieldStyles = {
   "& .MuiOutlinedInput-input": { fontSize: "14px", color: "#17233C" },
 };
 
-const FilterField = ({ label, children }) => (
-  <Box sx={{ minWidth: 0 }}>
+const FilterField = ({ label, htmlFor, labelId, children }) => (
+  <Box>
     <Typography
-      component="label"
+      component={htmlFor ? "label" : "span"}
+      id={labelId || `${htmlFor}-label`}
+      htmlFor={htmlFor}
       sx={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#31516D", mb: 0.8 }}
     >
       {label}
@@ -39,14 +41,21 @@ const FilterField = ({ label, children }) => (
   </Box>
 );
 
-const FilterSelect = ({ value, onChange, options, placeholder }) => (
+const FilterSelect = ({ id, value, onChange, options, placeholder }) => (
   <TextField
     select
     fullWidth
     size="small"
+    id={id}
     value={value}
     onChange={(event) => onChange(event.target.value)}
-    SelectProps={{ displayEmpty: true }}
+    slotProps={{
+      select: {
+        displayEmpty: true,
+        labelId: `${id}-label`,
+        SelectDisplayProps: { "aria-labelledby": `${id}-label` },
+      },
+    }}
     sx={fieldStyles}
   >
     {placeholder && <MenuItem value="">{placeholder}</MenuItem>}
@@ -60,6 +69,10 @@ const FilterSelect = ({ value, onChange, options, placeholder }) => (
 
 const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Search rooms" }) => {
   const update = (name) => (value) => onChange(name, value);
+  const invalidRentRange =
+    values.minRent !== "" &&
+    values.maxRent !== "" &&
+    Number(values.minRent) > Number(values.maxRent);
 
   return (
     <Box
@@ -70,10 +83,11 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         alignItems: "end",
       }}
     >
-      <FilterField label="Location">
+      <FilterField label="Location" htmlFor="room-filter-location">
         <TextField
           fullWidth
           size="small"
+          id="room-filter-location"
           placeholder="Search by area"
           value={values.location}
           onChange={(event) => update("location")(event.target.value)}
@@ -84,11 +98,12 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Min rent">
+      <FilterField label="Min rent" htmlFor="room-filter-min-rent">
         <TextField
           fullWidth
           size="small"
           type="number"
+          id="room-filter-min-rent"
           placeholder="₹0"
           inputProps={{ min: 0 }}
           value={values.minRent}
@@ -97,21 +112,25 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Max rent">
+      <FilterField label="Max rent" htmlFor="room-filter-max-rent">
         <TextField
           fullWidth
           size="small"
           type="number"
+          id="room-filter-max-rent"
           placeholder="Any"
           inputProps={{ min: 0 }}
           value={values.maxRent}
           onChange={(event) => update("maxRent")(event.target.value)}
+          error={invalidRentRange}
+          helperText={invalidRentRange ? "Max rent must be at least min rent" : ""}
           sx={fieldStyles}
         />
       </FilterField>
 
-      <FilterField label="Room type">
+      <FilterField label="Room type" labelId="room-filter-room-type-label">
         <FilterSelect
+          id="room-filter-room-type"
           value={values.roomType}
           onChange={update("roomType")}
           options={ROOM_TYPES.map((option) => ({ value: option, label: option }))}
@@ -119,8 +138,9 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Gender">
+      <FilterField label="Gender" labelId="room-filter-gender-label">
         <FilterSelect
+          id="room-filter-gender"
           value={values.gender}
           onChange={update("gender")}
           options={GENDERS.map((option) => ({
@@ -131,8 +151,9 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Food">
+      <FilterField label="Food" labelId="room-filter-food-label">
         <FilterSelect
+          id="room-filter-food"
           value={values.food}
           onChange={update("food")}
           options={FOOD_OPTIONS}
@@ -140,8 +161,9 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Food preference">
+      <FilterField label="Food preference" labelId="room-filter-food-preference-label">
         <FilterSelect
+          id="room-filter-food-preference"
           value={values.foodPreference}
           onChange={update("foodPreference")}
           options={FOOD_PREFERENCES.map((option) => ({ value: option, label: option }))}
@@ -149,8 +171,13 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         />
       </FilterField>
 
-      <FilterField label="Sort by">
-        <FilterSelect value={values.sort} onChange={update("sort")} options={SORT_OPTIONS} />
+      <FilterField label="Sort by" labelId="room-filter-sort-label">
+        <FilterSelect
+          id="room-filter-sort"
+          value={values.sort}
+          onChange={update("sort")}
+          options={SORT_OPTIONS}
+        />
       </FilterField>
 
       <Box
@@ -167,6 +194,7 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
           variant="contained"
           startIcon={<SearchRounded />}
           onClick={onSubmit}
+          disabled={invalidRentRange}
           sx={{
             height: 47,
             minWidth: 170,

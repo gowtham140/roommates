@@ -285,7 +285,7 @@ const Home = () => {
             </Box>
 
             <Button
-              onClick={() => handleSearch()}
+              onClick={() => navigate("/rooms")}
               endIcon={<ArrowForwardIcon />}
               sx={{
                 display: {

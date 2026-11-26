@@ -9,9 +9,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "email_otps_tb")
+@Table(name = "email_otps_tb", uniqueConstraints = @UniqueConstraint(name = "uk_email_otp_purpose", columnNames = { "email", "purpose" }))
 public class EmailOtp {
 
     @Id

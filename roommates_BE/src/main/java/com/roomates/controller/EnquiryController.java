@@ -19,6 +19,8 @@ import com.roomates.webModel.EnquiryRequest;
 import com.roomates.webModel.EnquiryResponse;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 @RestController
 public class EnquiryController {
@@ -40,13 +42,21 @@ public class EnquiryController {
     }
 
     @GetMapping("/api/enquiries/sent")
-    public ResponseEntity<ApiResponse<List<EnquiryResponse>>> sent(@AuthenticationPrincipal AuthUser principal) {
-        return ResponseEntity.ok(ApiResponse.ok(enquiryService.sent(principal.getUserId())));
+    public ResponseEntity<ApiResponse<List<EnquiryResponse>>> sent(
+            @AuthenticationPrincipal AuthUser principal,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(100) int size) {
+
+        return ResponseEntity.ok(ApiResponse.ok(enquiryService.sent(principal.getUserId(), page, size)));
     }
 
     @GetMapping("/api/enquiries/received")
-    public ResponseEntity<ApiResponse<List<EnquiryResponse>>> received(@AuthenticationPrincipal AuthUser principal) {
-        return ResponseEntity.ok(ApiResponse.ok(enquiryService.received(principal.getUserId())));
+    public ResponseEntity<ApiResponse<List<EnquiryResponse>>> received(
+            @AuthenticationPrincipal AuthUser principal,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "100") @Min(1) @Max(100) int size) {
+
+        return ResponseEntity.ok(ApiResponse.ok(enquiryService.received(principal.getUserId(), page, size)));
     }
 
     @GetMapping("/api/enquiries/count")

@@ -2,6 +2,7 @@ package com.roomates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -48,5 +49,21 @@ class TokenUtilTest {
         user.setUserType("2");
 
         assertFalse(expiredUtil.validateToken(expiredUtil.generateToken(user)));
+    }
+
+    @Test
+    void missingSecretFailsWithClearMessage() {
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> new TokenUtil("", 3600000L));
+
+        assertTrue(error.getMessage().contains("JWT_SECRET is required"));
+    }
+
+    @Test
+    void shortSecretFailsWithClearMessage() {
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> new TokenUtil("too-short", 3600000L));
+
+        assertTrue(error.getMessage().contains("at least 32 bytes"));
     }
 }

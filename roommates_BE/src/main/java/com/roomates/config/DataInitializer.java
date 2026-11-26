@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,8 +16,10 @@ import com.roomates.model.Room;
 import com.roomates.model.User;
 import com.roomates.repository.RoomRepository;
 import com.roomates.repository.UserRepository;
+import com.roomates.security.UserTypes;
 
 @Component
+@Profile("dev")
 public class DataInitializer implements CommandLineRunner {
 
     private static final String DEMO_EMAIL = "demo@roommates.local";
@@ -43,16 +46,12 @@ public class DataInitializer implements CommandLineRunner {
             admin.setMailID(ADMIN_EMAIL);
             admin.setPhone_no("9000000001");
             admin.setPassword(passwordEncoder.encode("admin1234"));
-            admin.setCpassword("admin1234");
             admin.setGender("ANY");
-            admin.setUserType("1");
+            admin.setUserType(UserTypes.ADMIN);
             admin.setStatus(true);
             admin.setIsDelete(false);
             admin.setCreatedDate(new Date());
             admin.setUpdatedDate(new Date());
-            userRepository.save(admin);
-        } else if (admin.getCpassword() == null) {
-            admin.setCpassword("admin1234");
             userRepository.save(admin);
         }
 
@@ -63,17 +62,13 @@ public class DataInitializer implements CommandLineRunner {
             owner.setMailID(DEMO_EMAIL);
             owner.setPhone_no("9000000000");
             owner.setPassword(passwordEncoder.encode("demo1234"));
-            owner.setCpassword("demo1234");
             owner.setGender("ANY");
-            owner.setUserType("2");
+            owner.setUserType(UserTypes.OWNER);
             owner.setStatus(true);
             owner.setIsDelete(false);
             owner.setCreatedDate(new Date());
             owner.setUpdatedDate(new Date());
             owner = userRepository.save(owner);
-        } else if (owner.getCpassword() == null) {
-            owner.setCpassword("demo1234");
-            userRepository.save(owner);
         }
 
         User seeker = userRepository.findByMailID(DEMO_SEEKER_EMAIL);
@@ -83,16 +78,12 @@ public class DataInitializer implements CommandLineRunner {
             seeker.setMailID(DEMO_SEEKER_EMAIL);
             seeker.setPhone_no("9000000002");
             seeker.setPassword(passwordEncoder.encode("seeker1234"));
-            seeker.setCpassword("seeker1234");
             seeker.setGender("ANY");
-            seeker.setUserType("3");
+            seeker.setUserType(UserTypes.SEEKER);
             seeker.setStatus(true);
             seeker.setIsDelete(false);
             seeker.setCreatedDate(new Date());
             seeker.setUpdatedDate(new Date());
-            userRepository.save(seeker);
-        } else if (seeker.getCpassword() == null) {
-            seeker.setCpassword("seeker1234");
             userRepository.save(seeker);
         }
 

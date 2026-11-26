@@ -11,7 +11,11 @@ public interface EnquiryService {
 
     List<EnquiryResponse> sent(Integer seekerId);
 
+    List<EnquiryResponse> sent(Integer seekerId, int page, int size);
+
     List<EnquiryResponse> received(Integer ownerId);
+
+    List<EnquiryResponse> received(Integer ownerId, int page, int size);
 
     long countNewReceived(Integer ownerId);
 
