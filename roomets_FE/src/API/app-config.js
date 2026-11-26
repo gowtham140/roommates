@@ -1,4 +1,4 @@
-const raw = import.meta.env.VITE_API_URL || "https://roommates-ky68.onrender.com";
+const raw = window.location.hostname === "localhost" ?   "http://localhost:8080" : "https://roommates-ky68.onrender.com";
 
 export const API_URL = raw.replace(/\/+$/, "") + "/";
 export const API_ORIGIN = raw.replace(/\/+$/, "");
