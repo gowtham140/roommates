@@ -19,8 +19,11 @@ describe("RoomFilters", () => {
     const onChange = vi.fn();
     render(<RoomFilters values={baseValues} onChange={onChange} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Chennai" } });
-    expect(onChange).toHaveBeenCalled();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Location" }));
+    expect(screen.getByRole("option", { name: "Anna Nagar" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Tambaram" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "Tambaram" }));
+    expect(onChange).toHaveBeenCalledWith("location", "Tambaram");
     expect(onSubmit).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Search rooms" }));
@@ -30,7 +33,7 @@ describe("RoomFilters", () => {
   it("associates visible labels with their fields", () => {
     render(<RoomFilters values={baseValues} onChange={() => {}} onSubmit={() => {}} />);
 
-    expect(screen.getByLabelText("Location")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Location" })).toBeInTheDocument();
     expect(screen.getByLabelText("Min rent")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Room type" })).toBeInTheDocument();
   });

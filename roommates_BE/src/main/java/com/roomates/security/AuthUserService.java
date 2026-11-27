@@ -1,5 +1,8 @@
 package com.roomates.security;
 
+import java.util.Locale;
+import java.util.regex.Pattern;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,6 +15,8 @@ import com.roomates.repository.UserRepository;
 @Service
 public class AuthUserService implements UserDetailsService {
 
+    private static final Pattern PHONE_PATTERN = Pattern.compile("\\d{10,15}");
+
     private final UserRepository userRepository;
 
     public AuthUserService(UserRepository userRepository) {
@@ -19,11 +24,24 @@ public class AuthUserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByMailID(email);
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
+        User user = findUser(identifier);
         if (user == null) {
-            throw new UsernameNotFoundException("Invalid email or password");
+            throw new UsernameNotFoundException("Invalid email or mobile number or password");
         }
         return AuthUser.from(user);
+    }
+
+    private User findUser(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return null;
+        }
+        String normalized = identifier.trim().toLowerCase(Locale.ROOT);
+        User user = userRepository.findByMailID(normalized);
+        if (user != null) {
+            return user;
+        }
+        String digits = normalized.replaceAll("\\D", "");
+        return PHONE_PATTERN.matcher(digits).matches() ? userRepository.findFirstByPhoneNo(digits) : null;
     }
 }

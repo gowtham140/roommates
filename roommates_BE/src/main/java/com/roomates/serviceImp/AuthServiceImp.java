@@ -2,6 +2,7 @@ package com.roomates.serviceImp;
 
 import java.util.Date;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,6 +30,8 @@ import com.roomates.webModel.UserDto;
 
 @Service
 public class AuthServiceImp implements AuthService {
+
+    private static final Pattern PHONE_PATTERN = Pattern.compile("\\d{10,15}");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -88,17 +91,21 @@ public class AuthServiceImp implements AuthService {
 
     @Override
     public ApiResponse<AuthResponse> login(LoginRequest request) {
-        String email = normalize(request.getEmail());
+        String identifier = normalize(request.getEmail());
+        User user = findUserByIdentifier(identifier);
+        if (user == null) {
+            throw new BadRequestException("Invalid email or mobile number or password");
+        }
+
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(user.getMailID(), request.getPassword()));
         } catch (AuthenticationException e) {
-            throw new BadRequestException("Invalid email or password");
+            throw new BadRequestException("Invalid email or mobile number or password");
         }
 
-        User user = userRepository.findByMailID(email);
-        if (user == null || Boolean.FALSE.equals(user.getStatus()) || Boolean.TRUE.equals(user.getIsDelete())) {
+        if (Boolean.FALSE.equals(user.getStatus()) || Boolean.TRUE.equals(user.getIsDelete())) {
             throw new BadRequestException("This account is not active");
         }
 
@@ -158,6 +165,18 @@ public class AuthServiceImp implements AuthService {
     private User findUser(Integer userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private User findUserByIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return null;
+        }
+        User user = userRepository.findByMailID(identifier);
+        if (user != null) {
+            return user;
+        }
+        String digits = identifier.replaceAll("\\D", "");
+        return PHONE_PATTERN.matcher(digits).matches() ? userRepository.findFirstByPhoneNo(digits) : null;
     }
 
     private void requirePasswordMatch(String password, String confirmPassword) {

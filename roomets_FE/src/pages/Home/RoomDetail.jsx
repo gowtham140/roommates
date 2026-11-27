@@ -338,12 +338,26 @@ const RoomDetail = () => {
                 )}
               </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mb: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.6, mb: 0.8 }}>
                 <LocationOnOutlined sx={{ fontSize: 18, color: "#0F9D8A" }} />
-                <Typography sx={{ fontSize: "14px", color: "#667085" }}>
+                <Typography
+                  aria-hidden={!user}
+                  sx={{
+                    fontSize: "14px",
+                    color: "#667085",
+                    filter: user ? "none" : "blur(5px)",
+                    userSelect: user ? "auto" : "none",
+                    pointerEvents: user ? "auto" : "none",
+                  }}
+                >
                   {room.location || "Location not specified"}
                 </Typography>
               </Box>
+              {!user && (
+                <Typography sx={{ fontSize: 12, color: "#49657D", mb: 2 }}>
+                  Log in to view the exact address.
+                </Typography>
+              )}
 
               {room.latitude != null && room.longitude != null && (
                 <Box sx={{ mb: 2 }}>

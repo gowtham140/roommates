@@ -1,5 +1,6 @@
 import { SearchRounded } from "@mui/icons-material";
 import { Box, Button, MenuItem, TextField, Typography } from "@mui/material";
+import { CHENNAI_AREAS } from "./roomFilterUtils";
 
 const ROOM_TYPES = ["1RK", "1BHK", "2BHK", "3BHK"];
 const GENDERS = ["ANY", "MALE", "FEMALE"];
@@ -83,18 +84,13 @@ const RoomFilters = ({ values, onChange, onSubmit, onClear, submitLabel = "Searc
         alignItems: "end",
       }}
     >
-      <FilterField label="Location" htmlFor="room-filter-location">
-        <TextField
-          fullWidth
-          size="small"
+      <FilterField label="Location" labelId="room-filter-location-label">
+        <FilterSelect
           id="room-filter-location"
-          placeholder="Search by area"
           value={values.location}
-          onChange={(event) => update("location")(event.target.value)}
-          InputProps={{
-            startAdornment: <SearchRounded sx={{ fontSize: 19, color: "#0F9D8A" }} />,
-          }}
-          sx={fieldStyles}
+          onChange={update("location")}
+          options={CHENNAI_AREAS.map((area) => ({ value: area, label: area }))}
+          placeholder="Any area"
         />
       </FilterField>
 

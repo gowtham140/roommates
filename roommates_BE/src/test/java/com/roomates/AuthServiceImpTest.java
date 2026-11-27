@@ -188,6 +188,37 @@ class AuthServiceImpTest {
     }
 
     @Test
+    void loginByPhoneNumberAuthenticatesWithResolvedEmail() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("99769-85349");
+        request.setPassword("secret123");
+
+        User user = new User();
+        user.setId(7);
+        user.setName("Test");
+        user.setMailID("test@example.com");
+        user.setPhone_no("9976985349");
+        user.setUserType("2");
+        user.setStatus(true);
+        user.setIsDelete(false);
+
+        when(userRepository.findFirstByPhoneNo("9976985349")).thenReturn(user);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authentication);
+        when(tokenUtil.generateToken(user)).thenReturn("jwt-token");
+        when(tokenUtil.getValidityMs()).thenReturn(86400000L);
+
+        ApiResponse<AuthResponse> result = service.login(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("jwt-token", result.getData().getToken());
+        ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
+                ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
+        verify(authenticationManager).authenticate(tokenCaptor.capture());
+        assertEquals("test@example.com", tokenCaptor.getValue().getPrincipal());
+    }
+
+    @Test
     void resetPasswordUpdatesHashConsumesOtpAndReturnsSuccess() {
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setEmail(" TEST@Example.com ");

@@ -29,6 +29,7 @@ import PlaceRounded from "@mui/icons-material/PlaceRounded";
 import { createRoom, deleteRoomImage, getRoom, updateRoom, uploadImages } from "../../API/roomsAPI";
 import { resolveImageUrl } from "../../API/app-config";
 import MapPicker from "../../components/maps/MapPicker";
+import { CHENNAI_AREAS } from "../../components/rooms/roomFilterUtils";
 import { useAuth } from "../../context/authContext";
 import { canManageRooms } from "../../utils/userTypes";
 
@@ -119,6 +120,12 @@ const PostRoom = () => {
     message: "",
     severity: "success",
   });
+
+  const currentLocation = pickedLocation?.location || editingRoom?.location || "";
+  const locationOptions =
+    currentLocation && !CHENNAI_AREAS.includes(currentLocation.trim())
+      ? [currentLocation.trim(), ...CHENNAI_AREAS]
+      : CHENNAI_AREAS;
 
   const selectedFilesRef = useRef([]);
 
@@ -412,12 +419,35 @@ const PostRoom = () => {
               </Grid>
 
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FieldLabel label="Location" htmlFor="room-location" />
-                <TextField
-                  fullWidth
-                  placeholder="e.g. Anna Nagar West"
-                  {...textField("location")}
-                  sx={fieldStyles}
+                <FieldLabel label="Location" labelId="room-location-label" />
+                <Controller
+                  name="location"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      select
+                      fullWidth
+                      id="room-location"
+                      {...field}
+                      error={Boolean(errors.location)}
+                      helperText={errors.location?.message || ""}
+                      slotProps={{
+                        select: {
+                          displayEmpty: true,
+                          labelId: "room-location-label",
+                          SelectDisplayProps: { "aria-labelledby": "room-location-label" },
+                        },
+                      }}
+                      sx={fieldStyles}
+                    >
+                      <MenuItem value="">Select area</MenuItem>
+                      {locationOptions.map((area) => (
+                        <MenuItem key={area} value={area}>
+                          {area}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
                 />
                 <Button
                   size="small"
