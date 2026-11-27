@@ -1,5 +1,6 @@
 package com.roomates.security;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -42,6 +43,14 @@ public class AuthUserService implements UserDetailsService {
             return user;
         }
         String digits = normalized.replaceAll("\\D", "");
-        return PHONE_PATTERN.matcher(digits).matches() ? userRepository.findFirstByPhoneNo(digits) : null;
+        if (!PHONE_PATTERN.matcher(digits).matches()) {
+            return null;
+        }
+        List<User> users = userRepository.findByPhoneNo(digits);
+        return users.stream()
+                .filter(candidate -> !Boolean.FALSE.equals(candidate.getStatus()))
+                .filter(candidate -> !Boolean.TRUE.equals(candidate.getIsDelete()))
+                .findFirst()
+                .orElse(null);
     }
 }

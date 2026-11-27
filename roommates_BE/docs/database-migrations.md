@@ -6,6 +6,7 @@ Flyway is disabled by default so local development can keep using Hibernate `ddl
 
 - `spring.jpa.hibernate.ddl-auto=validate` prevents Hibernate from changing the schema.
 - Flyway runs `classpath:db/migration` with `baseline-on-migrate=true` and baseline version `1`.
+- `schema.sql` runs in `prod` and `local` as an idempotent safety net so `feedback_tb` exists even when the database has no `flyway_schema_history`.
 
 For a database that already has a Hibernate-generated schema:
 

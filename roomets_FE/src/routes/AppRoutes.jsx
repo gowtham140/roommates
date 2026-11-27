@@ -22,6 +22,8 @@ const MyRooms = lazy(() => import("../pages/Home/MyRooms"));
 const MyEnquiries = lazy(() => import("../pages/Enquiries/MyEnquiries"));
 const LikedRooms = lazy(() => import("../pages/Seeker/LikedRooms"));
 const AdminDashboard = lazy(() => import("../pages/Admin/AdminDashboard"));
+const AdminFeedback = lazy(() => import("../pages/Admin/AdminFeedback"));
+const Feedback = lazy(() => import("../pages/Feedback/Feedback"));
 
 const Page = ({ title, subtitle }) => (
   <Container maxWidth="lg" sx={{ py: 6 }}>
@@ -46,6 +48,7 @@ const Page = ({ title, subtitle }) => (
 const ROOM_MANAGER_TYPES = [USER_TYPES.OWNER];
 const SEEKER_TYPES = [USER_TYPES.SEEKER];
 const ENQUIRY_TYPES = [USER_TYPES.OWNER, USER_TYPES.SEEKER];
+const FEEDBACK_TYPES = [USER_TYPES.OWNER, USER_TYPES.SEEKER];
 
 const AppRoutes = () => (
   <Routes>
@@ -71,12 +74,16 @@ const AppRoutes = () => (
           <Route element={<RoleRoute allowed={SEEKER_TYPES} />}>
             <Route path="my-applications" element={<Navigate to="/enquiries" replace />} />
           </Route>
+          <Route element={<RoleRoute allowed={FEEDBACK_TYPES} />}>
+            <Route path="feedback" element={<Feedback />} />
+          </Route>
           <Route path="profile" element={<Profile />} />
         </Route>
 
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminRoute />}>
             <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/feedback" element={<AdminFeedback />} />
           </Route>
         </Route>
 

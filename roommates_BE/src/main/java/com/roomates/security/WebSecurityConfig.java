@@ -85,7 +85,7 @@ public class WebSecurityConfig {
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/rooms/mine").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/rooms/**").permitAll()
-                .requestMatchers("/api/rooms/**", "/api/enquiries/**", "/api/uploads/**", "/api/reports/**")
+                .requestMatchers("/api/rooms/**", "/api/enquiries/**", "/api/uploads/**", "/api/reports/**", "/api/feedback/**")
                     .authenticated()
                 .requestMatchers("/uploads/**", "/", "/error").permitAll()
                 .anyRequest().authenticated()

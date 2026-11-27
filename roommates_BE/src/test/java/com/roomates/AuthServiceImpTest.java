@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.roomates.exception.BadRequestException;
@@ -202,7 +205,7 @@ class AuthServiceImpTest {
         user.setStatus(true);
         user.setIsDelete(false);
 
-        when(userRepository.findFirstByPhoneNo("9976985349")).thenReturn(user);
+        when(userRepository.findByPhoneNo("9976985349")).thenReturn(List.of(user));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(authentication);
         when(tokenUtil.generateToken(user)).thenReturn("jwt-token");
@@ -216,6 +219,62 @@ class AuthServiceImpTest {
                 ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
         verify(authenticationManager).authenticate(tokenCaptor.capture());
         assertEquals("test@example.com", tokenCaptor.getValue().getPrincipal());
+    }
+
+    @Test
+    void loginWithSharedPhoneNumberUsesAccountMatchingPassword() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("9976985349");
+        request.setPassword("secret456");
+
+        User first = new User();
+        first.setId(1);
+        first.setMailID("first@example.com");
+        first.setPhone_no("9976985349");
+        first.setStatus(true);
+        first.setIsDelete(false);
+
+        User second = new User();
+        second.setId(2);
+        second.setMailID("second@example.com");
+        second.setPhone_no("9976985349");
+        second.setStatus(true);
+        second.setIsDelete(false);
+
+        when(userRepository.findByPhoneNo("9976985349")).thenReturn(List.of(first, second));
+        when(authenticationManager.authenticate(argThat(token ->
+                token != null && "first@example.com".equals(token.getPrincipal()))))
+                .thenThrow(new BadCredentialsException("bad password"));
+        when(authenticationManager.authenticate(argThat(token ->
+                token != null && "second@example.com".equals(token.getPrincipal()))))
+                .thenReturn(authentication);
+        when(tokenUtil.generateToken(second)).thenReturn("jwt-token");
+        when(tokenUtil.getValidityMs()).thenReturn(86400000L);
+
+        ApiResponse<AuthResponse> result = service.login(request);
+
+        assertTrue(result.isSuccess());
+        assertEquals("second@example.com", result.getData().getUser().getEmail());
+        verify(tokenUtil).generateToken(second);
+    }
+
+    @Test
+    void registerRejectsDuplicatePhoneNumber() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test");
+        request.setEmail("new@example.com");
+        request.setPhone("9876543210");
+        request.setPassword("secret123");
+        request.setConfirmPassword("secret123");
+        request.setOtp("123456");
+        request.setGender("FEMALE");
+        request.setUserType("3");
+
+        when(userRepository.existsByMailID("new@example.com")).thenReturn(false);
+        when(userRepository.existsByPhoneNo("9876543210")).thenReturn(true);
+
+        assertThrows(BadRequestException.class, () -> service.register(request));
+        verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
     }
 
     @Test

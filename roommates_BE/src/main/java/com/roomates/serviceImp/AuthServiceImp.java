@@ -1,13 +1,13 @@
 package com.roomates.serviceImp;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,10 +55,14 @@ public class AuthServiceImp implements AuthService {
     @Transactional
     public ApiResponse<UserDto> register(RegisterRequest request) {
         String email = normalize(request.getEmail());
+        String phone = digitsOnly(request.getPhone());
         String userType = request.getUserType() == null ? "" : request.getUserType().trim();
 
         if (userRepository.existsByMailID(email)) {
             throw new BadRequestException("An account with this email already exists");
+        }
+        if (userRepository.existsByPhoneNo(phone)) {
+            throw new BadRequestException("An account with this phone number already exists");
         }
 
         if (!UserTypes.OWNER.equals(userType) && !UserTypes.SEEKER.equals(userType)) {
@@ -73,7 +77,7 @@ public class AuthServiceImp implements AuthService {
         User user = new User();
         user.setName(request.getName().trim());
         user.setMailID(email);
-        user.setPhone_no(request.getPhone().trim());
+        user.setPhone_no(phone);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setGender(request.getGender());
         user.setAge(request.getAge());
@@ -92,26 +96,27 @@ public class AuthServiceImp implements AuthService {
     @Override
     public ApiResponse<AuthResponse> login(LoginRequest request) {
         String identifier = normalize(request.getEmail());
-        User user = findUserByIdentifier(identifier);
-        if (user == null) {
+        List<User> candidates = findUsersByIdentifier(identifier);
+        User authenticatedUser = null;
+        for (User candidate : candidates) {
+            if (Boolean.FALSE.equals(candidate.getStatus()) || Boolean.TRUE.equals(candidate.getIsDelete())) {
+                continue;
+            }
+            try {
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(candidate.getMailID(), request.getPassword()));
+                authenticatedUser = candidate;
+                break;
+            } catch (AuthenticationException ignored) {
+            }
+        }
+        if (authenticatedUser == null) {
             throw new BadRequestException("Invalid email or mobile number or password");
         }
 
-        Authentication authentication;
-        try {
-            authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getMailID(), request.getPassword()));
-        } catch (AuthenticationException e) {
-            throw new BadRequestException("Invalid email or mobile number or password");
-        }
-
-        if (Boolean.FALSE.equals(user.getStatus()) || Boolean.TRUE.equals(user.getIsDelete())) {
-            throw new BadRequestException("This account is not active");
-        }
-
-        String token = tokenUtil.generateToken(user);
+        String token = tokenUtil.generateToken(authenticatedUser);
         AuthResponse response = new AuthResponse(
-                token, "Bearer", tokenUtil.getValidityMs() / 1000, toDto(user));
+                token, "Bearer", tokenUtil.getValidityMs() / 1000, toDto(authenticatedUser));
         return ApiResponse.ok("Signed in successfully", response);
     }
 
@@ -167,16 +172,20 @@ public class AuthServiceImp implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private User findUserByIdentifier(String identifier) {
+    private List<User> findUsersByIdentifier(String identifier) {
         if (identifier == null || identifier.isBlank()) {
-            return null;
+            return List.of();
         }
         User user = userRepository.findByMailID(identifier);
         if (user != null) {
-            return user;
+            return List.of(user);
         }
-        String digits = identifier.replaceAll("\\D", "");
-        return PHONE_PATTERN.matcher(digits).matches() ? userRepository.findFirstByPhoneNo(digits) : null;
+        String digits = digitsOnly(identifier);
+        return PHONE_PATTERN.matcher(digits).matches() ? userRepository.findByPhoneNo(digits) : List.of();
+    }
+
+    private String digitsOnly(String value) {
+        return value == null ? "" : value.replaceAll("\\D", "");
     }
 
     private void requirePasswordMatch(String password, String confirmPassword) {

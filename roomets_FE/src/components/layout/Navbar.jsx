@@ -26,6 +26,7 @@ import {
   AddHomeWorkOutlined,
   AdminPanelSettingsOutlined,
   FavoriteBorderRounded,
+  FeedbackOutlined,
   HomeOutlined,
   InfoOutlined,
   LocationOnOutlined,
@@ -141,7 +142,13 @@ const Navbar = () => {
     if (seeker) {
       items.push({ label: "My Enquiries", path: "/enquiries", icon: <MailOutlineRounded fontSize="small" /> });
     }
-    if (admin) items.push({ label: "Admin Dashboard", path: "/admin", icon: <AdminPanelSettingsOutlined fontSize="small" /> });
+    if (owner || seeker) {
+      items.push({ label: "Feedback", path: "/feedback", icon: <FeedbackOutlined fontSize="small" /> });
+    }
+    if (admin) {
+      items.push({ label: "Admin Dashboard", path: "/admin", icon: <AdminPanelSettingsOutlined fontSize="small" /> });
+      items.push({ label: "Feedback", path: "/admin/feedback", icon: <FeedbackOutlined fontSize="small" /> });
+    }
     return items.filter((item, index, arr) => arr.findIndex((i) => i.path === item.path) === index);
   }, [admin, owner, seeker]);
 
