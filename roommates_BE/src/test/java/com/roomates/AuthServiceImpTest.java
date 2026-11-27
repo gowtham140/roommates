@@ -92,6 +92,27 @@ class AuthServiceImpTest {
     }
 
     @Test
+    void registerAllowsOmittedConfirmPassword() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test User");
+        request.setEmail("test@example.com");
+        request.setPhone("9876543210");
+        request.setPassword("secret123");
+        request.setOtp("123456");
+        request.setGender("FEMALE");
+        request.setUserType("3");
+
+        when(userRepository.existsByMailID("test@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("secret123")).thenReturn("$2a$hashed");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ApiResponse<?> result = service.register(request);
+
+        assertTrue(result.isSuccess());
+        verify(emailOtpService).verifyOtp("test@example.com", "123456", EmailOtpService.PURPOSE_REGISTER);
+    }
+
+    @Test
     void registerRejectsMismatchedPasswordConfirmation() {
         RegisterRequest request = new RegisterRequest();
         request.setName("Test");

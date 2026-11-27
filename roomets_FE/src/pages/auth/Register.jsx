@@ -144,6 +144,7 @@ const Register = () => {
         email,
         phone: mobile,
         password,
+        confirmPassword,
         otp: otp.trim(),
         gender,
         userType,

@@ -61,7 +61,9 @@ public class AuthServiceImp implements AuthService {
         if (!UserTypes.OWNER.equals(userType) && !UserTypes.SEEKER.equals(userType)) {
             throw new BadRequestException("Please select a valid account type");
         }
-        requirePasswordMatch(request.getPassword(), request.getConfirmPassword());
+        if (request.getConfirmPassword() != null && !request.getConfirmPassword().isBlank()) {
+            requirePasswordMatch(request.getPassword(), request.getConfirmPassword());
+        }
 
         emailOtpService.verifyOtp(email, request.getOtp(), EmailOtpService.PURPOSE_REGISTER);
 
